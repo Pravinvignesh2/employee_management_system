@@ -328,7 +328,7 @@ import { AuthService } from '../../services/auth.service';
     }
 
     .profile-header {
-      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
       padding: 24px 0;
     }
@@ -385,7 +385,7 @@ import { AuthService } from '../../services/auth.service';
     .avatar {
       width: 80px;
       height: 80px;
-      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -1126,7 +1126,7 @@ Type: ${doc.type}
 Upload Date: ${new Date().toLocaleDateString()}
 Document ID: DOC-${Date.now()}
 
-This document has been uploaded to the HR Management System
+This document has been uploaded to the Employee Management System
 and is maintained as part of the employee's official records.
 
 Document: ${doc.name}`;

@@ -302,8 +302,9 @@ import { PerformanceService } from '../../services/performance.service';
 
     .header-left p {
       margin: 0;
-      opacity: 0.9;
+      color: white;
       font-size: 16px;
+      opacity: 0.95;
     }
 
     .header-actions {

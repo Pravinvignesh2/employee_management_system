@@ -273,7 +273,7 @@ import { AuthService } from '../../services/auth.service';
     }
 
     .payroll-header {
-      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
       padding: 32px 0;
     }
@@ -295,7 +295,8 @@ import { AuthService } from '../../services/auth.service';
 
     .header-left p {
       margin: 0;
-      opacity: 0.9;
+      color: white;
+      opacity: 0.95;
     }
 
     .header-actions {
@@ -638,13 +639,16 @@ import { AuthService } from '../../services/auth.service';
     }
 
     .btn-secondary {
-      background: rgba(255, 255, 255, 0.2);
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      border: none;
+      border-radius: 8px;
+      transition: all 0.2s ease;
     }
 
     .btn-secondary:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     }
 
     .btn-secondary:disabled {
@@ -655,9 +659,10 @@ import { AuthService } from '../../services/auth.service';
     .btn-icon {
       width: 32px;
       height: 32px;
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -666,8 +671,8 @@ import { AuthService } from '../../services/auth.service';
     }
 
     .btn-icon:hover {
-      background: var(--background-color);
-      border-color: var(--primary-color);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     }
 
     .btn-icon:disabled {

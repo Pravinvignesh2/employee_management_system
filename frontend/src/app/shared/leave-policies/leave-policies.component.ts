@@ -73,7 +73,7 @@ interface LeavePolicy {
           <h4>Approval Process</h4>
           <ul>
             <li>Leave requests are reviewed by immediate supervisor</li>
-            <li>HR approval required for leaves exceeding 10 days</li>
+            <li>Manager approval required for leaves exceeding 10 days</li>
             <li>Management approval required for leaves during peak periods</li>
             <li>Response time: 2-3 working days for regular requests</li>
           </ul>
@@ -94,7 +94,7 @@ interface LeavePolicy {
           <ul>
             <li>Medical certificate required for sick leave of 3 days or more</li>
             <li>Supporting documents may be required for special leave types</li>
-            <li>All leave records are maintained in the HR system</li>
+            <li>All leave records are maintained in the Employee Management system</li>
             <li>Employees must update their leave status upon return</li>
           </ul>
                   </div>
@@ -408,7 +408,7 @@ export class LeavePoliciesComponent implements OnInit {
         restrictions: [
           'Cannot be used for non-medical purposes',
           'May require medical examination for extended leave',
-          'Subject to verification by HR'
+          'Subject to verification by Manager'
         ],
         icon: 'fas fa-user-md',
         color: 'linear-gradient(135deg, #f56565, #e53e3e)'
@@ -493,7 +493,7 @@ export class LeavePoliciesComponent implements OnInit {
         requirements: [
           'Valid exceptional circumstance',
           'Exhaust all other leave types first',
-          'HR and management approval required'
+          'HR and manager approval required'
         ],
         restrictions: [
           'No salary during leave period',

@@ -459,7 +459,8 @@ import { LeaveStatistics } from '../../models/leave.model';
 
     .header-left p {
       margin: 8px 0 0 0;
-      opacity: 0.9;
+      color: white;
+      opacity: 0.95;
       font-size: 16px;
     }
 
@@ -825,7 +826,8 @@ import { LeaveStatistics } from '../../models/leave.model';
 
     .welcome-section p {
       margin: 0;
-      opacity: 0.9;
+      color: white;
+      opacity: 0.95;
       font-size: 16px;
     }
 
@@ -1090,7 +1092,7 @@ export class DashboardComponent implements OnInit {
 
   loadRecentActivities(): void {
     // Try to get activities from backend first, fallback to aggregated data
-    this.dashboardService.getRecentActivities(10).subscribe({
+    this.dashboardService.getRecentActivities(5).subscribe({
       next: (activities) => {
         this.recentActivities = activities;
         this.loading = false;
@@ -1098,7 +1100,7 @@ export class DashboardComponent implements OnInit {
       error: (error) => {
         console.error('Error loading recent activities from backend, using fallback:', error);
         // Fallback to aggregated data from different services
-        this.dashboardService.getRecentActivitiesFallback(10).subscribe({
+        this.dashboardService.getRecentActivitiesFallback(5).subscribe({
           next: (activities) => {
             this.recentActivities = activities;
             this.loading = false;

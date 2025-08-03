@@ -19,9 +19,16 @@ import {
   template: `
     <div class="attendance-container">
       <!-- Header -->
-      <div class="header">
-        <h1>Attendance Management</h1>
-        <div class="current-time">{{ currentTime | date:'medium' }}</div>
+      <div class="attendance-header">
+        <div class="header-content">
+          <div class="header-left">
+            <h1>Attendance Management</h1>
+            <p>Track and manage attendance</p>
+          </div>
+          <div class="header-right">
+            <div class="current-time">{{ currentTime | date:'medium' }}</div>
+          </div>
+        </div>
       </div>
 
       <!-- Punch In/Out Section -->
@@ -246,24 +253,41 @@ import {
       color: var(--text-primary);
     }
 
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    .attendance-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 32px 0;
       margin-bottom: 32px;
     }
 
-    .header h1 {
-      margin: 0;
-      color: var(--text-primary);
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .header-left h1 {
+      margin: 0 0 8px 0;
       font-size: 32px;
-      font-weight: 700;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+    }
+
+    .header-left p {
+      margin: 0;
+      color: white;
+      opacity: 0.95;
+      font-size: 16px;
     }
 
     .current-time {
-      color: var(--text-secondary);
+      color: white;
       font-size: 16px;
       font-weight: 500;
+      opacity: 0.9;
     }
 
     .punch-section {

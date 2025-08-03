@@ -1,9 +1,9 @@
 # Employee Management System
-A comprehensive, role-based HR Management System built with Angular frontend and Spring Boot backend, featuring modern UI/UX design principles and robust security.
+A comprehensive, role-based Employee Management System built with Angular frontend and Spring Boot backend, featuring modern UI/UX design principles and robust security.
 
 ## 🎯 Project Overview
 
-This HR Management System provides a complete solution for managing employees, attendance, leaves, payroll, and performance with role-based access control. The system is designed with a clean, minimalistic UI and follows modern development practices.
+This Employee Management System provides a complete solution for managing employees, attendance, leaves, payroll, and performance with role-based access control. The system is designed with a clean, minimalistic UI and follows modern development practices.
 
 ## 🏗️ Architecture
 
@@ -124,7 +124,7 @@ This HR Management System provides a complete solution for managing employees, a
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd hr-management-system/backend
+   cd employee-management-system/backend
    ```
 
 2. **Build the project**
@@ -165,7 +165,7 @@ This HR Management System provides a complete solution for managing employees, a
 ## 📁 Project Structure
 
 ```
-hr-management-system/
+employee-management-system/
 ├── backend/
 │   ├── src/main/java/com/hrm/system/
 │   │   ├── config/           # Configuration classes
@@ -273,7 +273,7 @@ npm run test:coverage
 mvn clean package
 
 # Run JAR file
-java -jar target/hr-management-system-1.0.0.jar
+java -jar target/employee-management-system-1.0.0.jar
 ```
 
 ### Frontend Deployment

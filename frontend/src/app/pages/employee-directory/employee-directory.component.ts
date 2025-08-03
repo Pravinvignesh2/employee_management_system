@@ -14,27 +14,31 @@ import { Router, ActivatedRoute } from '@angular/router';
             <h1>Employee Directory</h1>
             <p>Find and manage your team members</p>
           </div>
-          <div class="header-actions">
-            <div class="search-box">
-              <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
-                <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <input 
-                type="text" 
-                placeholder="Search employees..."
-                [(ngModel)]="searchTerm"
-                (input)="onSearch()"
-                class="search-input">
-            </div>
-            <button class="add-employee-btn" (click)="openAddEmployeeModal()">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              Add Employee
-            </button>
+        </div>
+      </div>
+
+      <!-- Search and Add Section -->
+      <div class="search-add-section">
+        <div class="search-add-content">
+          <div class="search-box">
+            <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+              <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <input 
+              type="text" 
+              placeholder="Search employees..."
+              [(ngModel)]="searchTerm"
+              (input)="onSearch()"
+              class="search-input">
           </div>
+          <button class="add-employee-btn" (click)="openAddEmployeeModal()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Add Employee
+          </button>
         </div>
       </div>
 
@@ -232,8 +236,23 @@ import { Router, ActivatedRoute } from '@angular/router';
 
     .header-left p {
       margin: 0;
-      opacity: 0.9;
+      color: white;
       font-size: 16px;
+      opacity: 0.95;
+    }
+
+    .search-add-section {
+      background: white;
+      padding: 24px 40px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .search-add-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      gap: 16px;
+      align-items: center;
     }
 
     .header-actions {
@@ -260,9 +279,9 @@ import { Router, ActivatedRoute } from '@angular/router';
     .search-input {
       width: 100%;
       padding: 12px 16px 12px 48px;
-      border: none;
+      border: 1px solid #d1d5db;
       border-radius: 12px;
-      background: rgba(255, 255, 255, 0.9);
+      background: white;
       color: #1f2937;
       font-size: 16px;
       font-weight: 500;
@@ -274,16 +293,16 @@ import { Router, ActivatedRoute } from '@angular/router';
 
     .search-input:focus {
       outline: none;
-      background: white;
-      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
     }
 
     .add-employee-btn {
       display: flex;
       align-items: center;
       gap: 8px;
-      background: rgba(255, 255, 255, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
       color: white;
       padding: 12px 20px;
       border-radius: 12px;
@@ -293,8 +312,8 @@ import { Router, ActivatedRoute } from '@angular/router';
     }
 
     .add-employee-btn:hover {
-      background: rgba(255, 255, 255, 0.3);
       transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     }
 
     .filters-section {

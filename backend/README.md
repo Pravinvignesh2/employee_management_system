@@ -1,7 +1,7 @@
-# HR Management System - Backend
+# Employee Management System - Backend
 
 ## Overview
-This is the backend service for the HR Management System, built with Spring Boot, JPA, and SQLite.
+This is the backend service for the Employee Management System, built with Spring Boot, JPA, and SQLite.
 
 ## Issues and Solutions
 

@@ -1,7 +1,7 @@
 {
-  "name": "hr-management-frontend",
+  "name": "employee-management-frontend",
   "version": "1.0.0",
-  "description": "Role-Based HR Management System Frontend",
+  "description": "Role-Based Employee Management System Frontend",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",

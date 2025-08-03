@@ -80,7 +80,7 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
   file:
-    name: logs/hr-management-system.log
+    name: logs/employee-management-system.log
 
 # Swagger Configuration
 springdoc:
@@ -91,11 +91,11 @@ springdoc:
     operations-sorter: method
     tags-sorter: alpha
   info:
-    title: HR Management System API
+    title: Employee Management System API
     description: REST API for Employee Management System    
     version: 1.0.0
     contact:
-      name: HR Management Team
+      name: Employee Management Team
       email: support@hrm.com
 
 # File Upload Configuration

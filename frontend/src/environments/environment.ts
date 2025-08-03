@@ -1,7 +1,7 @@
 export const environment = {
   production: false,
   apiUrl: 'http://localhost:8080/api',
-  appName: 'HR Management System',
+  appName: 'Employee Management System',
   version: '1.0.0',
   defaultLanguage: 'en',
   supportedLanguages: ['en'],

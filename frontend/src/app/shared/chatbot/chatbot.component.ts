@@ -312,7 +312,7 @@ export class ChatbotComponent implements OnInit {
     const lowerMessage = userMessage.toLowerCase();
     
     if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
-      this.addBotMessage('Hello! How can I assist you with the HR management system today?');
+      this.addBotMessage('Hello! How can I assist you with the Employee management system today?');
     } else if (lowerMessage.includes('attendance') || lowerMessage.includes('punch')) {
       this.addBotMessage('You can manage your attendance by punching in and out daily. The attendance page shows your working hours and status. Need help with anything specific?');
     } else if (lowerMessage.includes('leave') || lowerMessage.includes('vacation')) {
@@ -324,9 +324,9 @@ export class ChatbotComponent implements OnInit {
     } else if (lowerMessage.includes('project') || lowerMessage.includes('work')) {
       this.addBotMessage('You can view and manage your assigned projects in the Projects tab of your profile. Managers can assign new projects to employees.');
     } else if (lowerMessage.includes('help') || lowerMessage.includes('support')) {
-      this.addBotMessage('I\'m here to help! You can ask me about attendance, leave management, profile updates, payroll, projects, or any other HR-related questions.');
+      this.addBotMessage('I\'m here to help! You can ask me about attendance, leave management, profile updates, payroll, projects, or any other Employee Management-related questions.');
     } else {
-      this.addBotMessage('I understand you\'re asking about "' + userMessage + '". For specific HR system questions, try asking about attendance, leave, profile, payroll, or projects. How else can I help?');
+      this.addBotMessage('I understand you\'re asking about "' + userMessage + '". For specific Employee Management system questions, try asking about attendance, leave, profile, payroll, or projects. How else can I help?');
     }
   }
 } 

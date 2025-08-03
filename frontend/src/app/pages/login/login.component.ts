@@ -98,12 +98,25 @@ import { AuthService } from '../../services/auth.service';
   styles: [`
     .login-container {
       min-height: 100vh;
+      height: 100vh;
+      width: 100vw;
       display: flex;
       align-items: center;
       justify-content: center;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background-attachment: fixed;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
       padding: 20px;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 1;
     }
     
     .login-background {
@@ -346,7 +359,10 @@ import { AuthService } from '../../services/auth.service';
         gap: 12px;
       }
     }
-  `]
+  `],
+  host: {
+    'style': 'display: block; width: 100%; height: 100vh;'
+  }
 })
 export class LoginComponent {
   email: string = '';

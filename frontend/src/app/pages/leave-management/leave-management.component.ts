@@ -20,25 +20,30 @@ import {
   template: `
     <div class="leave-container">
       <!-- Header -->
-      <div class="header">
-        <h1>Leave Management</h1>
-        <div class="header-actions">
-          <button 
-            *ngIf="!isAdminOrManager" 
-            class="btn-primary" 
-            (click)="openLeaveRequestModal()"
-            [disabled]="isLoading">
-            <i class="fas fa-plus"></i>
-            Request Leave
-          </button>
-          <button 
-            *ngIf="isAdminOrManager" 
-            class="btn-primary" 
-            (click)="openLeaveRequestModal()"
-            [disabled]="isLoading">
-            <i class="fas fa-plus"></i>
-            Create Leave
-          </button>
+      <div class="leave-header">
+        <div class="header-content">
+          <div class="header-left">
+            <h1>Leave Management</h1>
+            <p>Manage leave requests and approvals</p>
+          </div>
+          <div class="header-actions">
+            <button 
+              *ngIf="!isAdminOrManager" 
+              class="btn-primary" 
+              (click)="openLeaveRequestModal()"
+              [disabled]="isLoading">
+              <i class="fas fa-plus"></i>
+              Request Leave
+            </button>
+            <button 
+              *ngIf="isAdminOrManager" 
+              class="btn-primary" 
+              (click)="openLeaveRequestModal()"
+              [disabled]="isLoading">
+              <i class="fas fa-plus"></i>
+              Create Leave
+            </button>
+          </div>
         </div>
       </div>
 
@@ -308,18 +313,34 @@ import {
       margin: 0 auto;
     }
 
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    .leave-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 32px 0;
       margin-bottom: 32px;
     }
 
-    .header h1 {
-      margin: 0;
-      color: #2d3748;
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .header-left h1 {
+      margin: 0 0 8px 0;
       font-size: 32px;
-      font-weight: 700;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+    }
+
+    .header-left p {
+      margin: 0;
+      color: white;
+      opacity: 0.95;
+      font-size: 16px;
     }
 
     .header-actions {
@@ -328,11 +349,11 @@ import {
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, #667eea, #764ba2);
+      background: rgba(255, 255, 255, 0.2);
       color: white;
-      border: none;
+      border: 1px solid rgba(255, 255, 255, 0.3);
       padding: 12px 24px;
-      border-radius: 8px;
+      border-radius: 12px;
       font-weight: 600;
       cursor: pointer;
       display: flex;
@@ -342,8 +363,9 @@ import {
     }
 
     .btn-primary:hover {
+      background: rgba(255, 255, 255, 0.3);
       transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+      box-shadow: 0 8px 25px rgba(255, 255, 255, 0.2);
     }
 
     .btn-primary:disabled {

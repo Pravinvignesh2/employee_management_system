@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Testing HR Management System Authentication and User Creation"
+echo "Testing Employee Management System Authentication and User Creation"
 echo "=============================================================="
 
 # Test 1: Try to access users endpoint without authentication

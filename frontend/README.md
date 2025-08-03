@@ -1,6 +1,6 @@
-# HR Management System - Frontend
+# Employee Management System - Frontend
 
-A modern, responsive Angular frontend for the Role-Based HR Management System with Material Design and role-based access control.
+A modern, responsive Angular frontend for the Role-Based Employee Management System with Material Design and role-based access control.
 
 ## 🚀 Features
 
@@ -191,10 +191,10 @@ npm run build:prod
 ### Docker Deployment
 ```bash
 # Build Docker image
-docker build -t hr-management-frontend .
+docker build -t employee-management-frontend .
 
 # Run container
-docker run -p 80:80 hr-management-frontend
+docker run -p 80:80 employee-management-frontend
 ```
 
 ## 🔧 Configuration
@@ -205,7 +205,7 @@ docker run -p 80:80 hr-management-frontend
 export const environment = {
   production: false,
   apiUrl: 'http://localhost:8080/api',
-  appName: 'HR Management System',
+  appName: 'Employee Management System',
   version: '1.0.0'
 };
 ```
