@@ -1,0 +1,724 @@
+import { Component, OnInit } from '@angular/core';
+import { UserService } from '../../services/user.service';
+import { AttendanceService } from '../../services/attendance.service';
+import { LeaveService } from '../../services/leave.service';
+import { User, UserStatistics } from '../../models/user.model';
+import { AttendanceStatistics } from '../../models/attendance.model';
+import { LeaveStatistics } from '../../models/leave.model';
+
+@Component({
+  selector: 'app-dashboard',
+  template: `
+    <div class="dashboard-container">
+      <!-- Header -->
+      <div class="dashboard-header">
+        <div class="header-content">
+          <div class="header-left">
+            <h1>Dashboard</h1>
+            <p>Welcome back! Here's what's happening today.</p>
+          </div>
+          <button class="refresh-btn" (click)="refreshData()" [disabled]="loading">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M1 4V10H7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M23 20V14H17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M20.49 9C19.2214 5.33805 15.7011 2.5 11.5 2.5C6.80546 2.5 2.5 6.80546 2.5 11.5C2.5 16.1945 6.80546 20.5 11.5 20.5C15.7011 20.5 19.2214 17.662 20.49 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading Spinner -->
+      <div *ngIf="loading" class="loading-container">
+        <div class="loading-spinner">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2V6M12 18V22M4.93 4.93L7.76 7.76M16.24 16.24L19.07 19.07M2 12H6M18 12H22M4.93 19.07L7.76 16.24M16.24 7.76L19.07 4.93" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <p>Loading dashboard data...</p>
+      </div>
+
+      <!-- Error Message -->
+      <div *ngIf="error" class="error-container">
+        <div class="error-card">
+          <svg class="error-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="error-content">
+            <h3>Error Loading Data</h3>
+            <p>{{ error }}</p>
+            <button class="retry-btn" (click)="refreshData()">Try Again</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard Content -->
+      <div *ngIf="!loading && !error" class="dashboard-content">
+        
+        <!-- Statistics Cards -->
+        <div class="stats-grid">
+          
+          <!-- User Statistics -->
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon user-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89317 18.7122 8.75608 18.1676 9.45768C17.623 10.1593 16.8604 10.6597 16 10.88" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="stat-info">
+                <h3>Employee Statistics</h3>
+                <p>Total workforce overview</p>
+              </div>
+            </div>
+            <div class="stat-content">
+              <div class="stat-item">
+                <span class="stat-label">Total Employees</span>
+                <span class="stat-value">{{ userStatistics?.totalUsers || 0 }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Active Employees</span>
+                <span class="stat-value">{{ userStatistics?.activeUsers || 0 }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">New Hires (This Month)</span>
+                <span class="stat-value">{{ userStatistics?.newHiresThisMonth || 0 }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Pending Approvals</span>
+                <span class="stat-value">{{ userStatistics?.pendingApprovals || 0 }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Attendance Statistics -->
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon attendance-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                  <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="stat-info">
+                <h3>Attendance Statistics</h3>
+                <p>Today's attendance overview</p>
+              </div>
+            </div>
+            <div class="stat-content">
+              <div class="stat-item">
+                <span class="stat-label">Present Today</span>
+                <span class="stat-value">{{ attendanceStatistics?.totalPresent || 0 }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Absent Today</span>
+                <span class="stat-value">{{ attendanceStatistics?.totalAbsent || 0 }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Half Day</span>
+                <span class="stat-value">{{ attendanceStatistics?.totalHalfDay || 0 }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Attendance Rate</span>
+                <span class="stat-value" [ngClass]="'rate-' + getAttendanceRateColor()">
+                  {{ getAttendanceRate() | number:'1.1-1' }}%
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Leave Statistics -->
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon leave-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="stat-info">
+                <h3>Leave Statistics</h3>
+                <p>Leave management overview</p>
+              </div>
+            </div>
+            <div class="stat-content">
+              <div class="stat-item">
+                <span class="stat-label">Total Leaves</span>
+                <span class="stat-value">{{ leaveStatistics?.totalLeaves || 0 }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Pending Leaves</span>
+                <span class="stat-value">{{ leaveStatistics?.pendingLeaves || 0 }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Approved Leaves</span>
+                <span class="stat-value">{{ leaveStatistics?.approvedLeaves || 0 }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Approval Rate</span>
+                <span class="stat-value" [ngClass]="'rate-' + getLeaveApprovalRateColor()">
+                  {{ getLeaveApprovalRate() | number:'1.1-1' }}%
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon action-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="stat-info">
+                <h3>Quick Actions</h3>
+                <p>Common tasks</p>
+              </div>
+            </div>
+            <div class="stat-content">
+              <div class="quick-actions">
+                <button class="action-btn primary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="19" y1="8" x2="19" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="16" y1="11" x2="22" y2="11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Add Employee
+                </button>
+                <button class="action-btn accent">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Approve Leaves
+                </button>
+                <button class="action-btn warning">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Mark Attendance
+                </button>
+                <button class="action-btn neutral">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="10,9 9,9 8,9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  View Reports
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Recent Activities -->
+        <div class="recent-activities">
+          <div class="section-header">
+            <h2>Recent Activities</h2>
+            <p>Latest updates and notifications</p>
+          </div>
+          <div class="activities-list">
+            <div *ngFor="let activity of recentActivities" class="activity-item">
+              <div class="activity-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="activity-content">
+                <p class="activity-text">{{ activity.text }}</p>
+                <span class="activity-time">{{ activity.time | date:'short' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `,
+  styles: [`
+    .dashboard-container {
+      min-height: 100%;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .dashboard-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 32px 40px;
+      color: white;
+    }
+
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header-left h1 {
+      margin: 0;
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+    }
+
+    .header-left p {
+      margin: 8px 0 0 0;
+      opacity: 0.9;
+      font-size: 16px;
+    }
+
+    .refresh-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .refresh-btn:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-1px);
+    }
+
+    .refresh-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 20px;
+      text-align: center;
+    }
+
+    .loading-spinner {
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .error-container {
+      padding: 40px 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .error-card {
+      background: white;
+      border: 1px solid #fecaca;
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      max-width: 500px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .error-icon {
+      color: #ef4444;
+      flex-shrink: 0;
+    }
+
+    .error-content h3 {
+      margin: 0 0 8px 0;
+      color: #1f2937;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .error-content p {
+      margin: 0 0 16px 0;
+      color: #6b7280;
+    }
+
+    .retry-btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .retry-btn:hover {
+      background: #5a67d8;
+    }
+
+    .dashboard-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+
+    .stat-card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      border: 1px solid #e5e7eb;
+      transition: all 0.2s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    .stat-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .stat-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+
+    .user-icon {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .attendance-icon {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+
+    .leave-icon {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    }
+
+    .action-icon {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+
+    .stat-info h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: #1f2937;
+    }
+
+    .stat-info p {
+      margin: 4px 0 0 0;
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+    .stat-content {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .stat-item:last-child {
+      border-bottom: none;
+    }
+
+    .stat-label {
+      color: #6b7280;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .stat-value {
+      color: #1f2937;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .rate-success {
+      color: #10b981;
+    }
+
+    .rate-warning {
+      color: #f59e0b;
+    }
+
+    .rate-danger {
+      color: #ef4444;
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: white;
+    }
+
+    .action-btn.primary {
+      background: #667eea;
+    }
+
+    .action-btn.accent {
+      background: #10b981;
+    }
+
+    .action-btn.warning {
+      background: #f59e0b;
+    }
+
+    .action-btn.neutral {
+      background: #6b7280;
+    }
+
+    .action-btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.1);
+    }
+
+    .recent-activities {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      border: 1px solid #e5e7eb;
+    }
+
+    .section-header {
+      margin-bottom: 24px;
+    }
+
+    .section-header h2 {
+      margin: 0 0 4px 0;
+      font-size: 20px;
+      font-weight: 700;
+      color: #1f2937;
+    }
+
+    .section-header p {
+      margin: 0;
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+    .activities-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .activity-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      background: #f9fafb;
+      border-radius: 12px;
+      border: 1px solid #f3f4f6;
+    }
+
+    .activity-icon {
+      width: 40px;
+      height: 40px;
+      background: #667eea;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+
+    .activity-content {
+      flex: 1;
+    }
+
+    .activity-text {
+      margin: 0 0 4px 0;
+      color: #1f2937;
+      font-weight: 500;
+    }
+
+    .activity-time {
+      color: #6b7280;
+      font-size: 12px;
+    }
+
+    @media (max-width: 768px) {
+      .dashboard-header {
+        padding: 24px 20px;
+      }
+
+      .header-content {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+      }
+
+      .header-left h1 {
+        font-size: 28px;
+      }
+
+      .dashboard-content {
+        padding: 24px 16px;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      .quick-actions {
+        grid-template-columns: 1fr;
+      }
+    }
+  `]
+})
+export class DashboardComponent implements OnInit {
+  
+  userStatistics: UserStatistics | null = null;
+  attendanceStatistics: AttendanceStatistics | null = null;
+  leaveStatistics: LeaveStatistics | null = null;
+  currentUser: User | null = null;
+  loading = true;
+  error = '';
+  recentActivities: any[] = [
+    { text: 'New employee John Doe joined the company', time: new Date() },
+    { text: 'Leave request approved for Jane Smith', time: new Date(Date.now() - 3600000) },
+    { text: 'Team meeting scheduled for tomorrow at 10 AM', time: new Date(Date.now() - 7200000) },
+    { text: 'Performance review completed for Mike Johnson', time: new Date(Date.now() - 10800000) }
+  ];
+  
+  constructor(
+    private userService: UserService,
+    private attendanceService: AttendanceService,
+    private leaveService: LeaveService
+  ) {}
+  
+  ngOnInit(): void {
+    this.loadDashboardData();
+  }
+  
+  loadDashboardData(): void {
+    this.loading = true;
+    this.error = '';
+    
+    // Load user statistics
+    this.userService.getUserStatistics().subscribe({
+      next: (stats) => {
+        this.userStatistics = stats;
+      },
+      error: (error) => {
+        console.error('Error loading user statistics:', error);
+        this.error = 'Failed to load user statistics';
+      }
+    });
+    
+    // Load attendance statistics
+    this.attendanceService.getAttendanceStatistics().subscribe({
+      next: (stats) => {
+        this.attendanceStatistics = stats;
+      },
+      error: (error) => {
+        console.error('Error loading attendance statistics:', error);
+        this.error = 'Failed to load attendance statistics';
+      }
+    });
+    
+    // Load leave statistics
+    this.leaveService.getLeaveStatistics().subscribe({
+      next: (stats) => {
+        this.leaveStatistics = stats;
+      },
+      error: (error) => {
+        console.error('Error loading leave statistics:', error);
+        this.error = 'Failed to load leave statistics';
+      },
+      complete: () => {
+        this.loading = false;
+      }
+    });
+  }
+  
+  refreshData(): void {
+    this.loadDashboardData();
+  }
+  
+  getAttendanceRate(): number {
+    if (!this.attendanceStatistics) return 0;
+    return this.attendanceStatistics.attendanceRate;
+  }
+  
+  getAttendanceRateColor(): string {
+    const rate = this.getAttendanceRate();
+    if (rate >= 90) return 'success';
+    if (rate >= 75) return 'warning';
+    return 'danger';
+  }
+  
+  getLeaveApprovalRate(): number {
+    if (!this.leaveStatistics) return 0;
+    const total = this.leaveStatistics.totalLeaves;
+    const approved = this.leaveStatistics.approvedLeaves;
+    return total > 0 ? (approved / total) * 100 : 0;
+  }
+  
+  getLeaveApprovalRateColor(): string {
+    const rate = this.getLeaveApprovalRate();
+    if (rate >= 80) return 'success';
+    if (rate >= 60) return 'warning';
+    return 'danger';
+  }
+} 

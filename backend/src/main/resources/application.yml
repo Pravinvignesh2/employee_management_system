@@ -1,0 +1,196 @@
+spring:
+  application:
+    name: HR Management System
+  
+  # Database Configuration
+  datasource:
+    url: jdbc:h2:mem:hr_management;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 30000
+      idle-timeout: 300000
+      max-lifetime: 900000
+      leak-detection-threshold: 60000 
+  
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+        use_sql_comments: true
+    database-platform: org.hibernate.dialect.H2Dialect
+  
+  # Security Configuration
+  security:
+    user:
+      name: admin
+      password: admin123
+  
+  # Mail Configuration (for notifications)
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+  
+  # H2 Console Configuration
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: true
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:hr-management-system-super-secure-jwt-secret-key-2024-with-512-bits-minimum-length-requirement-for-hs512-algorithm-this-is-a-very-long-secret-key-to-meet-the-minimum-requirements-for-hs512-algorithm}
+  expiration: ${JWT_EXPIRATION:86400000} # 24 hours in milliseconds
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000} # 7 days in milliseconds
+
+# Server Configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+    min-response-size: 1024
+
+# Logging Configuration
+logging:
+  level:
+    com.hrm.system: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/hr-management-system.log
+
+# Swagger Configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  info:
+    title: HR Management System API
+    description: REST API for HR Management System
+    version: 1.0.0
+    contact:
+      name: HR Management Team
+      email: support@hrm.com
+
+# File Upload Configuration
+file:
+  upload:
+    max-size: 5MB
+    allowed-types: jpg,jpeg,png,gif,pdf,doc,docx
+    upload-dir: uploads/
+
+# Application Configuration
+app:
+  cors:
+    allowed-origin-patterns: 
+      - http://localhost:4200
+      - http://localhost:3000
+    allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+    allowed-headers: "*"
+    allow-credentials: true
+  
+  # Pagination defaults
+  pagination:
+    default-page-size: 10
+    max-page-size: 100
+  
+  # Attendance Configuration
+  attendance:
+    standard-start-time: "09:00"
+    standard-end-time: "17:00"
+    late-threshold: "09:15"
+    early-departure-threshold: "16:45"
+    min-working-hours: 6
+    max-working-hours: 12
+  
+  # Leave Configuration
+  leave:
+    default-annual-leaves: 21
+    default-sick-leaves: 10
+    default-personal-leaves: 5
+    approval-required: true
+    auto-approve: false
+  
+  # Notification Configuration
+  notification:
+    email:
+      enabled: true
+      from: noreply@hrm.com
+    push:
+      enabled: false
+    sms:
+      enabled: false
+
+# Management Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Profile-specific configurations
+---
+spring:
+  config:
+    activate:
+      on-profile: development
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+logging:
+  level:
+    com.hrm.system: DEBUG
+    org.springframework.security: DEBUG
+
+---
+spring:
+  config:
+    activate:
+      on-profile: production
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: validate
+logging:
+  level:
+    com.hrm.system: INFO
+    org.springframework.security: WARN
+  file:
+    max-size: 10MB
+    max-history: 30 
