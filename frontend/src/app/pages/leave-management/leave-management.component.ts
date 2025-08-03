@@ -39,8 +39,8 @@ import {
         </div>
       </div>
 
-      <!-- Statistics Cards -->
-      <div class="statistics-section">
+      <!-- Statistics Cards (Admin/Manager Only) -->
+      <div class="statistics-section" *ngIf="isAdminOrManager">
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-icon total">
@@ -242,7 +242,8 @@ import {
             <div class="empty-message">
               <i class="fas fa-calendar-times"></i>
               <h4>No leave requests found</h4>
-              <p>{{ isAdminOrManager ? 'No leave requests match your current filters.' : 'You don\'t have any leave requests yet. Request a leave to get started!' }}</p>
+                             <p *ngIf="isAdminOrManager">No leave requests match your current filters.</p>
+               <p *ngIf="!isAdminOrManager">You don't have any leave requests yet. Request a leave to get started!</p>
             </div>
           </div>
         </div>

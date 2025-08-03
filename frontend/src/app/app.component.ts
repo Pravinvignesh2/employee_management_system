@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
 
 import { AuthService } from './services/auth.service';
+import { ThemeService } from './services/theme.service';
 import { UserResponse } from './models/user.model';
 import { environment } from '../environments/environment';
 
@@ -12,6 +13,9 @@ import { environment } from '../environments/environment';
     <div class="app-container" [attr.data-theme]="currentTheme">
       <!-- Loading Spinner -->
       <app-loading-spinner *ngIf="isLoading"></app-loading-spinner>
+      
+      <!-- Theme Toggle Button -->
+      <app-theme-toggle *ngIf="isAuthenticated$ | async"></app-theme-toggle>
       
       <!-- Login Page -->
       <div *ngIf="!(isAuthenticated$ | async)" class="auth-container">
@@ -111,6 +115,7 @@ export class AppComponent implements OnInit {
 
   constructor(
     private authService: AuthService,
+    private themeService: ThemeService,
     private router: Router
   ) {
     this.isAuthenticated$ = this.authService.isAuthenticated$;
@@ -118,18 +123,17 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.initializeTheme();
     this.checkAuthentication();
+    this.initializeTheme();
   }
 
   /**
-   * Initialize theme from localStorage or environment
+   * Initialize theme from theme service
    */
   private initializeTheme(): void {
-    const savedTheme = localStorage.getItem('theme');
-    this.isDarkTheme = savedTheme === 'dark' || 
-                      (!savedTheme && environment.features.darkMode);
-    this.updateTheme();
+    this.themeService.theme$.subscribe(theme => {
+      this.isDarkTheme = theme === 'dark';
+    });
   }
 
   /**
@@ -161,17 +165,7 @@ export class AppComponent implements OnInit {
    * Toggle between light and dark theme
    */
   toggleTheme(): void {
-    this.isDarkTheme = !this.isDarkTheme;
-    this.updateTheme();
-    localStorage.setItem('theme', this.isDarkTheme ? 'dark' : 'light');
-  }
-
-  /**
-   * Update theme on document
-   */
-  private updateTheme(): void {
-    const theme = this.isDarkTheme ? 'dark' : 'light';
-    document.documentElement.setAttribute('data-theme', theme);
+    this.themeService.toggleTheme();
   }
 
   /**

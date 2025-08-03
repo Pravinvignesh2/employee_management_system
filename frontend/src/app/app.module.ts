@@ -61,6 +61,7 @@ import { LeaveCalendarComponent } from './shared/leave-calendar/leave-calendar.c
 import { LeavePoliciesComponent } from './shared/leave-policies/leave-policies.component';
 import { LeaveReportsComponent } from './shared/leave-reports/leave-reports.component';
 import { BulkOperationsComponent } from './shared/bulk-operations/bulk-operations.component';
+import { ThemeToggleComponent } from './shared/theme-toggle/theme-toggle.component';
 
 // Guards
 import { AuthGuard } from './guards/auth.guard';
@@ -77,6 +78,7 @@ import { AttendanceService } from './services/attendance.service';
 import { LeaveService } from './services/leave.service';
 import { PayrollService } from './services/payroll.service';
 import { PerformanceService } from './services/performance.service';
+import { ThemeService } from './services/theme.service';
 
 // Routes
 import { AppRoutingModule } from './app-routing.module';
@@ -103,7 +105,8 @@ import { AppRoutingModule } from './app-routing.module';
     LeaveCalendarComponent,
     LeavePoliciesComponent,
     LeaveReportsComponent,
-    BulkOperationsComponent
+    BulkOperationsComponent,
+    ThemeToggleComponent
   ],
   imports: [
     BrowserModule,
@@ -153,6 +156,7 @@ import { AppRoutingModule } from './app-routing.module';
     LeaveService,
     PayrollService,
     PerformanceService,
+    ThemeService,
     AuthGuard,
     RoleGuard,
     {

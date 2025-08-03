@@ -45,13 +45,14 @@ import { UserResponse } from '../../models/user.model';
   `,
   styles: [`
     .header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
       color: white;
       padding: 0;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      box-shadow: var(--shadow-md);
       position: sticky;
       top: 0;
       z-index: 1000;
+      transition: background var(--transition-normal);
     }
 
     .header-content {

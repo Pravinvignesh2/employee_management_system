@@ -93,13 +93,13 @@ import { UserResponse } from '../../models/user.model';
   styles: [`
     .sidebar {
       width: 280px;
-      background: white;
-      color: #1f2937;
+      background: var(--surface-color);
+      color: var(--text-primary);
       height: 100%;
       min-height: calc(100vh - 64px); /* Subtract header height */
       transition: all 0.3s ease;
-      border-right: 1px solid #e5e7eb;
-      box-shadow: 2px 0 4px -1px rgba(0, 0, 0, 0.1);
+      border-right: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
       overflow-y: auto;
       position: sticky;
       top: 0;
@@ -111,7 +111,7 @@ import { UserResponse } from '../../models/user.model';
 
     .sidebar-header {
       padding: 20px;
-      border-bottom: 1px solid #f3f4f6;
+      border-bottom: 1px solid var(--border-color);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -124,13 +124,13 @@ import { UserResponse } from '../../models/user.model';
     }
 
     .sidebar-brand svg {
-      color: #667eea;
+      color: var(--primary-color);
     }
 
     .brand-text {
       font-size: 18px;
       font-weight: 700;
-      color: #1f2937;
+      color: var(--text-primary);
     }
 
     .toggle-btn {
@@ -138,8 +138,8 @@ import { UserResponse } from '../../models/user.model';
       height: 32px;
       border: none;
       border-radius: 6px;
-      background: #f3f4f6;
-      color: #6b7280;
+      background: var(--surface-color-hover);
+      color: var(--text-secondary);
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -148,8 +148,8 @@ import { UserResponse } from '../../models/user.model';
     }
 
     .toggle-btn:hover {
-      background: #e5e7eb;
-      color: #374151;
+      background: var(--border-color);
+      color: var(--text-primary);
     }
 
     .sidebar-nav {
@@ -171,7 +171,7 @@ import { UserResponse } from '../../models/user.model';
       align-items: center;
       gap: 12px;
       padding: 12px 20px;
-      color: #6b7280;
+      color: var(--text-secondary);
       text-decoration: none;
       transition: all 0.2s ease;
       border-radius: 0 8px 8px 0;
@@ -179,14 +179,14 @@ import { UserResponse } from '../../models/user.model';
     }
 
     .sidebar-nav a:hover {
-      background: #f9fafb;
-      color: #374151;
+      background: var(--surface-color-hover);
+      color: var(--text-primary);
     }
 
     .sidebar-nav a.active {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
       color: white;
-      box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+      box-shadow: var(--shadow-sm);
     }
 
     .sidebar-nav a svg {

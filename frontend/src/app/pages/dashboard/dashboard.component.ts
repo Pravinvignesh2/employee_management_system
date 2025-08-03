@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { UserService } from '../../services/user.service';
 import { AttendanceService } from '../../services/attendance.service';
 import { LeaveService } from '../../services/leave.service';
+import { AuthService } from '../../services/auth.service';
 import { User, UserStatistics } from '../../models/user.model';
 import { AttendanceStatistics } from '../../models/attendance.model';
 import { LeaveStatistics } from '../../models/leave.model';
@@ -55,8 +56,8 @@ import { LeaveStatistics } from '../../models/leave.model';
       <!-- Dashboard Content -->
       <div *ngIf="!loading && !error" class="dashboard-content">
         
-        <!-- Statistics Cards -->
-        <div class="stats-grid">
+        <!-- Statistics Cards (Admin/Manager Only) -->
+        <div class="stats-grid" *ngIf="isAdminOrManager">
           
           <!-- User Statistics -->
           <div class="stat-card">
@@ -631,7 +632,8 @@ export class DashboardComponent implements OnInit {
   userStatistics: UserStatistics | null = null;
   attendanceStatistics: AttendanceStatistics | null = null;
   leaveStatistics: LeaveStatistics | null = null;
-  currentUser: User | null = null;
+  currentUser: any = null;
+  isAdminOrManager = false;
   loading = true;
   error = '';
   recentActivities: any[] = [
@@ -644,52 +646,65 @@ export class DashboardComponent implements OnInit {
   constructor(
     private userService: UserService,
     private attendanceService: AttendanceService,
-    private leaveService: LeaveService
+    private leaveService: LeaveService,
+    private authService: AuthService
   ) {}
   
   ngOnInit(): void {
+    this.loadCurrentUser();
     this.loadDashboardData();
+  }
+
+  loadCurrentUser(): void {
+    this.currentUser = this.authService.getCurrentUser();
+    this.isAdminOrManager = this.authService.hasAnyRole(['ADMIN', 'MANAGER']);
   }
   
   loadDashboardData(): void {
     this.loading = true;
     this.error = '';
     
-    // Load user statistics
-    this.userService.getUserStatistics().subscribe({
-      next: (stats) => {
-        this.userStatistics = stats;
-      },
-      error: (error) => {
-        console.error('Error loading user statistics:', error);
-        this.error = 'Failed to load user statistics';
-      }
-    });
-    
-    // Load attendance statistics
-    this.attendanceService.getAttendanceStatistics().subscribe({
-      next: (stats) => {
-        this.attendanceStatistics = stats;
-      },
-      error: (error) => {
-        console.error('Error loading attendance statistics:', error);
-        this.error = 'Failed to load attendance statistics';
-      }
-    });
-    
-    // Load leave statistics
-    this.leaveService.getLeaveStatistics().subscribe({
-      next: (stats) => {
-        this.leaveStatistics = stats;
-      },
-      error: (error) => {
-        console.error('Error loading leave statistics:', error);
-        this.error = 'Failed to load leave statistics';
-      },
-      complete: () => {
-        this.loading = false;
-      }
-    });
+    // Only load statistics for admin/manager
+    if (this.isAdminOrManager) {
+      // Load user statistics
+      this.userService.getUserStatistics().subscribe({
+        next: (stats) => {
+          this.userStatistics = stats;
+        },
+        error: (error) => {
+          console.error('Error loading user statistics:', error);
+          this.error = 'Failed to load user statistics';
+        }
+      });
+      
+      // Load attendance statistics
+      this.attendanceService.getAttendanceStatistics().subscribe({
+        next: (stats) => {
+          this.attendanceStatistics = stats;
+        },
+        error: (error) => {
+          console.error('Error loading attendance statistics:', error);
+          this.error = 'Failed to load attendance statistics';
+        }
+      });
+      
+      // Load leave statistics
+      this.leaveService.getLeaveStatistics().subscribe({
+        next: (stats) => {
+          this.leaveStatistics = stats;
+        },
+        error: (error) => {
+          console.error('Error loading leave statistics:', error);
+          this.error = 'Failed to load leave statistics';
+        },
+        complete: () => {
+          this.loading = false;
+        }
+      });
+    } else {
+      // For regular employees, just set loading to false
+      this.loading = false;
+    }
   }
   
   refreshData(): void {

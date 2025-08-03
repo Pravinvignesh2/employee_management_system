@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { AttendanceService } from '../../services/attendance.service';
 import { AuthService } from '../../services/auth.service';
+import { ThemeService } from '../../services/theme.service';
 import { 
   Attendance, 
   AttendanceStatus, 
@@ -191,7 +192,8 @@ import {
              <div class="empty-message">
                <i class="fas fa-calendar-times"></i>
                <h4>No attendance records found</h4>
-               <p>{{ isAdminOrManager ? 'No attendance records match your current filters.' : 'You don\'t have any attendance records yet. Punch in to start tracking your attendance!' }}</p>
+               <p *ngIf="isAdminOrManager">No attendance records match your current filters.</p>
+               <p *ngIf="!isAdminOrManager">You don't have any attendance records yet. Punch in to start tracking your attendance!</p>
              </div>
            </div>
          </div>
@@ -224,6 +226,8 @@ import {
       padding: 24px;
       max-width: 1200px;
       margin: 0 auto;
+      background-color: var(--background-color);
+      color: var(--text-primary);
     }
 
     .header {
@@ -235,13 +239,13 @@ import {
 
     .header h1 {
       margin: 0;
-      color: #2d3748;
+      color: var(--text-primary);
       font-size: 32px;
       font-weight: 700;
     }
 
     .current-time {
-      color: #718096;
+      color: var(--text-secondary);
       font-size: 16px;
       font-weight: 500;
     }
@@ -251,11 +255,12 @@ import {
     }
 
     .punch-card {
-      background: white;
+      background: var(--surface-color);
       border-radius: 16px;
       padding: 32px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      border: 1px solid #e2e8f0;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
     }
 
     .punch-header {
@@ -265,13 +270,13 @@ import {
 
     .punch-header h3 {
       margin: 0 0 8px 0;
-      color: #2d3748;
+      color: var(--text-primary);
       font-size: 24px;
       font-weight: 600;
     }
 
     .date {
-      color: #718096;
+      color: var(--text-secondary);
       font-size: 16px;
     }
 
@@ -287,9 +292,10 @@ import {
       align-items: center;
       padding: 16px;
       border-radius: 12px;
-      background: #f7fafc;
+      background: var(--surface-color-hover);
       min-width: 120px;
       transition: all 0.3s ease;
+      color: var(--text-primary);
     }
 
     .status-item.active {
@@ -363,7 +369,7 @@ import {
 
     .working-hours {
       text-align: center;
-      color: #4a5568;
+      color: var(--text-secondary);
       font-size: 16px;
     }
 
@@ -378,14 +384,15 @@ import {
     }
 
     .stat-card {
-      background: white;
+      background: var(--surface-color);
       border-radius: 16px;
       padding: 24px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      border: 1px solid #e2e8f0;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
       display: flex;
       align-items: center;
       gap: 16px;
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
     }
 
     .stat-icon {
@@ -406,23 +413,24 @@ import {
 
     .stat-content h4 {
       margin: 0 0 4px 0;
-      color: #718096;
+      color: var(--text-secondary);
       font-size: 14px;
       font-weight: 500;
     }
 
     .stat-number {
-      color: #2d3748;
+      color: var(--text-primary);
       font-size: 28px;
       font-weight: 700;
     }
 
     .records-section {
-      background: white;
+      background: var(--surface-color);
       border-radius: 16px;
       padding: 24px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      border: 1px solid #e2e8f0;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
     }
 
     .section-header {
@@ -434,7 +442,7 @@ import {
 
     .section-header h3 {
       margin: 0;
-      color: #2d3748;
+      color: var(--text-primary);
       font-size: 20px;
       font-weight: 600;
     }
@@ -446,9 +454,11 @@ import {
 
     .date-filter, .status-filter {
       padding: 8px 12px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid var(--border-color);
       border-radius: 8px;
       font-size: 14px;
+      background-color: var(--surface-color);
+      color: var(--text-primary);
     }
 
     .records-table {
@@ -463,13 +473,14 @@ import {
     th, td {
       padding: 12px;
       text-align: left;
-      border-bottom: 1px solid #e2e8f0;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-primary);
     }
 
     th {
-      background: #f7fafc;
+      background: var(--surface-color-hover);
       font-weight: 600;
-      color: #4a5568;
+      color: var(--text-primary);
     }
 
     .employee-info {
@@ -479,12 +490,12 @@ import {
 
     .employee-name {
       font-weight: 600;
-      color: #2d3748;
+      color: var(--text-primary);
     }
 
     .employee-id {
       font-size: 12px;
-      color: #718096;
+      color: var(--text-secondary);
     }
 
     .status-badge {
@@ -548,11 +559,17 @@ import {
 
     .btn-page {
       padding: 8px 16px;
-      border: 1px solid #e2e8f0;
-      background: white;
+      border: 1px solid var(--border-color);
+      background: var(--surface-color);
       border-radius: 8px;
       cursor: pointer;
       font-size: 14px;
+      color: var(--text-primary);
+      transition: background-color 0.3s ease;
+    }
+
+    .btn-page:hover {
+      background: var(--surface-color-hover);
     }
 
     .btn-page:disabled {
@@ -561,7 +578,7 @@ import {
     }
 
          .page-info {
-       color: #718096;
+       color: var(--text-secondary);
        font-size: 14px;
      }
 
@@ -584,14 +601,14 @@ import {
 
      .empty-message h4 {
        margin: 0;
-       color: #4a5568;
+       color: var(--text-primary);
        font-size: 18px;
        font-weight: 600;
      }
 
      .empty-message p {
        margin: 0;
-       color: #718096;
+       color: var(--text-secondary);
        font-size: 14px;
        max-width: 400px;
      }
@@ -655,7 +672,8 @@ export class AttendanceComponent implements OnInit {
 
   constructor(
     private attendanceService: AttendanceService,
-    private authService: AuthService
+    private authService: AuthService,
+    private themeService: ThemeService
   ) {
     // Update current time every second
     setInterval(() => {
@@ -768,6 +786,7 @@ export class AttendanceComponent implements OnInit {
         this.hasPunchedIn = true;
         this.todayAttendance = attendance;
         this.loadTodayStatus();
+        this.loadAttendanceRecords(); // Refresh the records table
         this.isLoading = false;
         console.log('Successfully punched in at:', attendance.punchInTime);
         // You can add a toast notification here
@@ -799,6 +818,7 @@ export class AttendanceComponent implements OnInit {
         this.hasPunchedOut = true;
         this.todayAttendance = attendance;
         this.loadTodayStatus();
+        this.loadAttendanceRecords(); // Refresh the records table
         this.isLoading = false;
         console.log('Successfully punched out at:', attendance.punchOutTime);
         // You can add a toast notification here
