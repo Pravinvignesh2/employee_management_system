@@ -13,7 +13,8 @@ import { EmployeeProfileComponent } from './pages/employee-profile/employee-prof
 import { AttendanceComponent } from './pages/attendance/attendance.component';
 import { LeaveManagementComponent } from './pages/leave-management/leave-management.component';
 import { PayrollComponent } from './pages/payroll/payroll.component';
-import { PerformanceComponent } from './pages/performance/performance.component';
+
+import { PerformanceManagementComponent } from './pages/performance-management/performance-management.component';
 import { ProfileComponent } from './pages/profile/profile.component';
 import { AdminComponent } from './pages/admin/admin.component';
 import { ManagerComponent } from './pages/manager/manager.component';
@@ -69,10 +70,12 @@ const routes: Routes = [
     data: { roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE] }
   },
   
-  // Performance - Accessible by Admin, Manager, and Employee (own data)
+
+  
+  // Performance Management - Accessible by Admin, Manager, and Employee (own data)
   {
-    path: 'performance',
-    component: PerformanceComponent,
+    path: 'performance-management',
+    component: PerformanceManagementComponent,
     canActivate: [AuthGuard, RoleGuard],
     data: { roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE] }
   },
