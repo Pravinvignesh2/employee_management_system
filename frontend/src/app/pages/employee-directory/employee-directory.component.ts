@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { UserService } from '../../services/user.service';
 import { User } from '../../models/user.model';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-employee-directory',
@@ -178,6 +178,32 @@ import { Router } from '@angular/router';
         (save)="onSaveEmployee($event)"
         (close)="closeModal()">
       </app-employee-modal>
+
+      <!-- Confirm Dialog -->
+      <app-confirm-dialog
+        [isOpen]="showConfirmDialog"
+        [title]="confirmDialogData.title"
+        [message]="confirmDialogData.message"
+        (confirm)="onConfirmDelete()"
+        (cancel)="closeConfirmDialog()">
+      </app-confirm-dialog>
+
+      <!-- Success Dialog -->
+      <app-success-dialog
+        [isOpen]="showSuccessDialog"
+        [title]="successDialogData.title"
+        [message]="successDialogData.message"
+        (close)="closeSuccessDialog()">
+      </app-success-dialog>
+
+      <!-- Error Dialog -->
+      <app-confirm-dialog
+        [isOpen]="showErrorDialog"
+        [title]="errorDialogData.title"
+        [message]="errorDialogData.message"
+        (confirm)="closeErrorDialog()"
+        (cancel)="closeErrorDialog()">
+      </app-confirm-dialog>
     </div>
   `,
   styles: [`
@@ -633,14 +659,37 @@ export class EmployeeDirectoryComponent implements OnInit {
   showModal = false;
   selectedEmployee: User | null = null;
   isEditMode = false;
+  
+  // Dialog states
+  showConfirmDialog = false;
+  showSuccessDialog = false;
+  showErrorDialog = false;
+  confirmDialogData = { title: '', message: '', action: '' };
+  successDialogData = { title: '', message: '' };
+  errorDialogData = { title: '', message: '' };
+  employeeToDelete: User | null = null;
 
   constructor(
     private userService: UserService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
     this.loadEmployees();
+    
+    // Check if we should open the add employee modal
+    this.route.queryParams.subscribe(params => {
+      if (params['openAddModal'] === 'true') {
+        this.openAddEmployeeModal();
+        // Clear the query parameter from URL
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: {},
+          replaceUrl: true
+        });
+      }
+    });
   }
 
   loadEmployees(): void {
@@ -723,15 +772,27 @@ export class EmployeeDirectoryComponent implements OnInit {
   }
 
   deleteEmployee(employee: User): void {
-    if (confirm(`Are you sure you want to delete ${employee.firstName} ${employee.lastName}?`)) {
-      this.userService.deleteUser(employee.id).subscribe({
+    this.employeeToDelete = employee;
+    this.confirmDialogData = {
+      title: 'Delete Employee',
+      message: `Are you sure you want to delete ${employee.firstName} ${employee.lastName}?`,
+      action: 'delete'
+    };
+    this.showConfirmDialog = true;
+  }
+
+  onConfirmDelete(): void {
+    if (this.employeeToDelete) {
+      this.userService.deleteUser(this.employeeToDelete.id).subscribe({
         next: () => {
           this.loadEmployees();
-          this.showSuccessDialog('Employee deleted successfully!');
+          this.closeConfirmDialog();
+          this.showSuccessMessage('Employee deleted successfully!');
         },
         error: (error) => {
           console.error('Error deleting employee:', error);
-          this.showErrorDialog('Failed to delete employee. Please try again.');
+          this.closeConfirmDialog();
+          this.showErrorMessage('Failed to delete employee. Please try again.');
         }
       });
     }
@@ -744,11 +805,11 @@ export class EmployeeDirectoryComponent implements OnInit {
         next: (updatedEmployee) => {
           this.loadEmployees();
           this.closeModal();
-          this.showSuccessDialog('Employee updated successfully!');
+          this.showSuccessMessage('Employee updated successfully!');
         },
         error: (error) => {
           console.error('Error updating employee:', error);
-          this.showErrorDialog('Failed to update employee. Please try again.');
+          this.showErrorMessage('Failed to update employee. Please try again.');
         }
       });
     } else {
@@ -757,11 +818,11 @@ export class EmployeeDirectoryComponent implements OnInit {
         next: (newEmployee) => {
           this.loadEmployees();
           this.closeModal();
-          this.showSuccessDialog('Employee added successfully!');
+          this.showSuccessMessage('Employee added successfully!');
         },
         error: (error) => {
           console.error('Error creating employee:', error);
-          this.showErrorDialog('Failed to add employee. Please try again.');
+          this.showErrorMessage('Failed to add employee. Please try again.');
         }
       });
     }
@@ -773,13 +834,32 @@ export class EmployeeDirectoryComponent implements OnInit {
     this.isEditMode = false;
   }
 
-  showSuccessDialog(message: string): void {
-    if (confirm(message)) {
-      // User clicked OK, do nothing
-    }
+  showSuccessMessage(message: string): void {
+    this.successDialogData = {
+      title: 'Success!',
+      message: message
+    };
+    this.showSuccessDialog = true;
   }
 
-  showErrorDialog(message: string): void {
-    alert(message); // Keep alert for errors as they need immediate attention
+  showErrorMessage(message: string): void {
+    this.errorDialogData = {
+      title: 'Error',
+      message: message
+    };
+    this.showErrorDialog = true;
+  }
+
+  closeConfirmDialog(): void {
+    this.showConfirmDialog = false;
+    this.employeeToDelete = null;
+  }
+
+  closeSuccessDialog(): void {
+    this.showSuccessDialog = false;
+  }
+
+  closeErrorDialog(): void {
+    this.showErrorDialog = false;
   }
 } 

@@ -1,7 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { AttendanceService } from '../../services/attendance.service';
 import { AuthService } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
+import { UserService } from '../../services/user.service';
+import { User } from '../../models/user.model';
 import { 
   Attendance, 
   AttendanceStatus, 
@@ -34,13 +36,13 @@ import {
             <div class="status-item" [class.active]="hasPunchedIn">
               <i class="fas fa-sign-in-alt"></i>
               <span>Punch In</span>
-                             <small *ngIf="todayAttendance?.punchInTime">{{ todayAttendance?.punchInTime | slice:0:5 }}</small>
+                             <small *ngIf="todayAttendance?.punchInTime">{{ formatTime(todayAttendance?.punchInTime || '') }}</small>
             </div>
             
             <div class="status-item" [class.active]="hasPunchedOut">
               <i class="fas fa-sign-out-alt"></i>
               <span>Punch Out</span>
-                             <small *ngIf="todayAttendance?.punchOutTime">{{ todayAttendance?.punchOutTime | slice:0:5 }}</small>
+                             <small *ngIf="todayAttendance?.punchOutTime">{{ formatTime(todayAttendance?.punchOutTime || '') }}</small>
             </div>
           </div>
 
@@ -157,17 +159,14 @@ import {
                              <tr *ngFor="let record of attendanceRecords">
                  <td *ngIf="isAdminOrManager">
                    <div class="employee-info">
-                     <div class="employee-name">{{ record.employeeName }}</div>
+                     <div class="employee-name">{{ getFullName(record) }}</div>
                      <div class="employee-id">{{ record.employeeId }}</div>
                    </div>
                  </td>
                  <td>{{ record.date | date:'shortDate' }}</td>
-                 <td>{{ record.punchInTime | slice:0:5 || '-' }}</td>
-                 <td>{{ record.punchOutTime | slice:0:5 || '-' }}</td>
-                 <td>
-                   <span *ngIf="record.workingHours">{{ record.workingHours }}h {{ record.workingMinutes }}m</span>
-                   <span *ngIf="!record.workingHours">-</span>
-                 </td>
+                                     <td>{{ record.punchInTime ? formatTime(record.punchInTime) : '-' }}</td>
+                    <td>{{ record.punchOutTime ? formatTime(record.punchOutTime) : '-' }}</td>
+                 <td>{{ formatWorkingHours(record) }}</td>
                  <td>
                    <span class="status-badge" [class]="getStatusClass(record.status)">
                      {{ getStatusDisplay(record.status) }}
@@ -220,6 +219,23 @@ import {
         </div>
       </div>
     </div>
+
+    <!-- Confirm Dialog -->
+    <app-confirm-dialog
+      [isOpen]="showConfirmDialog"
+      [title]="confirmDialogData.title"
+      [message]="confirmDialogData.message"
+      (confirm)="onConfirmAction()"
+      (cancel)="closeConfirmDialog()">
+    </app-confirm-dialog>
+
+    <!-- Success Dialog -->
+    <app-success-dialog
+      [isOpen]="showSuccessDialog"
+      [title]="successDialogData.title"
+      [message]="successDialogData.message"
+      (close)="closeSuccessDialog()">
+    </app-success-dialog>
   `,
   styles: [`
     .attendance-container {
@@ -670,10 +686,18 @@ export class AttendanceComponent implements OnInit {
   selectedDate = new Date().toISOString().split('T')[0];
   selectedStatus = '';
 
+  // Dialog states
+  showConfirmDialog = false;
+  showSuccessDialog = false;
+  confirmDialogData = { title: '', message: '', action: '', attendanceId: 0 };
+  successDialogData = { title: '', message: '' };
+
   constructor(
     private attendanceService: AttendanceService,
     private authService: AuthService,
-    private themeService: ThemeService
+    private themeService: ThemeService,
+    private userService: UserService,
+    private cdr: ChangeDetectorRef
   ) {
     // Update current time every second
     setInterval(() => {
@@ -706,29 +730,37 @@ export class AttendanceComponent implements OnInit {
     );
 
     // Try to get today's attendance record
-    this.attendanceService.getTodayAttendance().subscribe(
-      attendance => {
+    this.attendanceService.getTodayAttendance().subscribe({
+      next: (attendance) => {
         this.todayAttendance = attendance;
         if (attendance) {
           this.hasPunchedIn = !!attendance.punchInTime;
           this.hasPunchedOut = !!attendance.punchOutTime;
+        } else {
+          // No attendance record for today - this is normal for new users
+          this.hasPunchedIn = false;
+          this.hasPunchedOut = false;
         }
       },
-      error => {
-        // No attendance record for today - this is normal for new users or first time
-        console.log('No attendance record found for today - this is normal for new users');
+      error: (error) => {
+        // Handle any other errors
+        console.error('Error loading today\'s attendance:', error);
         this.todayAttendance = null;
         this.hasPunchedIn = false;
         this.hasPunchedOut = false;
       }
-    );
+    });
   }
 
   loadStatistics(): void {
     if (this.isAdminOrManager) {
-      this.attendanceService.getAttendanceStatistics().subscribe(
-        stats => this.statistics = stats
-      );
+      this.attendanceService.getAttendanceStatistics().subscribe({
+        next: (stats) => this.statistics = stats,
+        error: (error) => {
+          console.error('Error loading attendance statistics:', error);
+          this.statistics = null;
+        }
+      });
     }
   }
 
@@ -737,17 +769,19 @@ export class AttendanceComponent implements OnInit {
     
     // For regular employees, show only their own attendance records
     if (!this.isAdminOrManager) {
-      this.attendanceService.getCurrentUserAttendance().subscribe(
-        records => {
+      this.attendanceService.getCurrentUserAttendance().subscribe({
+        next: (records) => {
           this.attendanceRecords = records;
           this.totalPages = 1; // Single page for user records
           this.isLoading = false;
         },
-        error => {
+        error: (error) => {
           console.error('Error loading user attendance records:', error);
+          this.attendanceRecords = []; // Set empty array instead of leaving undefined
+          this.totalPages = 1;
           this.isLoading = false;
         }
-      );
+      });
     } else {
       // For admins and managers, show all attendance records with filters
       const filters: AttendanceFilters = {};
@@ -758,17 +792,19 @@ export class AttendanceComponent implements OnInit {
         filters.status = this.selectedStatus as AttendanceStatus;
       }
 
-      this.attendanceService.getAllAttendance(this.currentPage, this.pageSize, filters).subscribe(
-        response => {
+      this.attendanceService.getAllAttendance(this.currentPage, this.pageSize, filters).subscribe({
+        next: (response) => {
           this.attendanceRecords = response.content;
           this.totalPages = response.totalPages;
           this.isLoading = false;
         },
-        error => {
+        error: (error) => {
           console.error('Error loading attendance records:', error);
+          this.attendanceRecords = []; // Set empty array instead of leaving undefined
+          this.totalPages = 0;
           this.isLoading = false;
         }
-      );
+      });
     }
   }
 
@@ -847,18 +883,13 @@ export class AttendanceComponent implements OnInit {
   }
 
   deleteAttendance(id: number): void {
-    if (confirm('Are you sure you want to delete this attendance record?')) {
-      this.attendanceService.deleteAttendance(id).subscribe(
-        () => {
-          this.loadAttendanceRecords();
-          // Show success message
-        },
-        error => {
-          console.error('Error deleting attendance:', error);
-          // Show error message
-        }
-      );
-    }
+    this.confirmDialogData = {
+      title: 'Delete Attendance Record',
+      message: 'Are you sure you want to delete this attendance record?',
+      action: 'delete',
+      attendanceId: id
+    };
+    this.showConfirmDialog = true;
   }
 
   getStatusDisplay(status: AttendanceStatus): string {
@@ -867,5 +898,141 @@ export class AttendanceComponent implements OnInit {
 
   getStatusClass(status: AttendanceStatus): string {
     return status.toLowerCase().replace('_', '-');
+  }
+
+  onConfirmAction(): void {
+    const { action, attendanceId } = this.confirmDialogData;
+    
+    if (action === 'delete') {
+      this.attendanceService.deleteAttendance(attendanceId).subscribe({
+        next: () => {
+          this.loadAttendanceRecords();
+          this.closeConfirmDialog();
+          this.showSuccessMessage('Attendance record deleted successfully!');
+        },
+        error: (error) => {
+          console.error('Error deleting attendance:', error);
+          this.closeConfirmDialog();
+          this.showSuccessMessage('Failed to delete attendance record. Please try again.');
+        }
+      });
+    }
+  }
+
+  closeConfirmDialog(): void {
+    this.showConfirmDialog = false;
+    this.confirmDialogData = { title: '', message: '', action: '', attendanceId: 0 };
+  }
+
+  showSuccessMessage(message: string): void {
+    this.successDialogData = {
+      title: 'Success!',
+      message: message
+    };
+    this.showSuccessDialog = true;
+  }
+
+    closeSuccessDialog(): void {
+    this.showSuccessDialog = false;
+  }
+
+  formatWorkingHours(record: any): string {
+    let totalHours = 0;
+    
+    // If working hours are provided, use them
+    if (record.workingHours !== undefined || record.workingMinutes !== undefined) {
+      totalHours = (record.workingHours || 0) + (record.workingMinutes || 0) / 60;
+    } 
+    // Otherwise, calculate from punch in and punch out times
+    else if (record.punchInTime && record.punchOutTime) {
+      const punchIn = new Date(`2000-01-01T${record.punchInTime}`);
+      const punchOut = new Date(`2000-01-01T${record.punchOutTime}`);
+      const diffMs = punchOut.getTime() - punchIn.getTime();
+      totalHours = diffMs / (1000 * 60 * 60); // Convert milliseconds to hours
+    }
+    
+    // If no working hours data available
+    if (totalHours <= 0) {
+      return '-';
+    }
+    
+    if (totalHours < 1) {
+      // Show as decimal for less than 1 hour (e.g., 0.1, 0.2, 0.5)
+      return totalHours.toFixed(1);
+    } else {
+      // Show as hours and minutes for 1 hour or more
+      const hours = Math.floor(totalHours);
+      const minutes = Math.round((totalHours - hours) * 60);
+      return `${hours}h ${minutes}m`;
+    }
+  }
+
+  formatTime(timeString: string): string {
+    if (!timeString) return '';
+    
+    try {
+      // If it's already in HH:MM:SS format, just return it
+      if (timeString.includes(':') && timeString.split(':').length >= 2) {
+        const parts = timeString.split(':');
+        const hours = parts[0].padStart(2, '0');
+        const minutes = parts[1].padStart(2, '0');
+        const seconds = parts[2] ? parts[2].split('.')[0].padStart(2, '0') : '00';
+        return `${hours}:${minutes}:${seconds}`;
+      }
+      
+      // If it's a full date string, parse it
+      const time = new Date(timeString);
+      if (isNaN(time.getTime())) {
+        return timeString; // Return original if parsing fails
+      }
+      
+      const hours = time.getHours().toString().padStart(2, '0');
+      const minutes = time.getMinutes().toString().padStart(2, '0');
+      const seconds = time.getSeconds().toString().padStart(2, '0');
+      
+      return `${hours}:${minutes}:${seconds}`;
+    } catch (error) {
+      console.error('Error formatting time:', timeString, error);
+      return timeString; // Return original if any error occurs
+    }
+  }
+
+  // Cache for user names to avoid multiple API calls
+  private userNamesCache: { [key: number]: string } = {};
+
+  getFullName(record: any): string {
+    // If we have firstName and lastName, use them
+    if (record.firstName && record.lastName) {
+      return `${record.firstName} ${record.lastName}`;
+    }
+    
+    // If we have a cached name, use it
+    if (record.userId && this.userNamesCache[record.userId]) {
+      return this.userNamesCache[record.userId];
+    }
+    
+    // If employeeName is not generic, use it
+    if (record.employeeName && !record.employeeName.includes('Employee')) {
+      return record.employeeName;
+    }
+    
+    // If we have userId, fetch the user data
+    if (record.userId && !this.userNamesCache[record.userId]) {
+      this.userService.getUserById(record.userId).subscribe({
+        next: (user: User) => {
+          const fullName = `${user.firstName} ${user.lastName}`;
+          this.userNamesCache[record.userId] = fullName;
+          // Trigger change detection
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          // If fetch fails, cache a fallback
+          this.userNamesCache[record.userId] = record.employeeName || 'Unknown Employee';
+        }
+      });
+      return 'Loading...';
+    }
+    
+    return record.employeeName || 'Unknown Employee';
   }
 } 

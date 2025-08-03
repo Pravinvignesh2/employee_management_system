@@ -24,6 +24,11 @@ public interface LeaveService {
     Page<LeaveDto> getAllLeaves(Pageable pageable);
     
     /**
+     * Get all leaves with pagination and filters
+     */
+    Page<LeaveDto> getAllLeavesWithFilters(Pageable pageable, Long userId, Leave.LeaveType leaveType, Leave.LeaveStatus status, String startDate, String endDate, String query);
+    
+    /**
      * Get leave by ID
      */
     Optional<LeaveDto> getLeaveById(Long id);

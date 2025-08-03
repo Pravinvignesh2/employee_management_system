@@ -89,21 +89,31 @@ public class AttendanceController {
     }
     
     /**
-     * Get all attendance records with pagination
+     * Get all attendance records with pagination and filters
      */
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    @Operation(summary = "Get all attendance", description = "Get paginated list of all attendance records")
+    @Operation(summary = "Get all attendance", description = "Get paginated list of all attendance records with filters")
     public ResponseEntity<Page<AttendanceDto>> getAllAttendance(
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "10") int size,
             @Parameter(description = "Sort field") @RequestParam(defaultValue = "date") String sortBy,
-            @Parameter(description = "Sort direction") @RequestParam(defaultValue = "DESC") String sortDir) {
+            @Parameter(description = "Sort direction") @RequestParam(defaultValue = "DESC") String sortDir,
+            @Parameter(description = "Filter by date (YYYY-MM-DD)") @RequestParam(required = false) String date,
+            @Parameter(description = "Filter by status") @RequestParam(required = false) Attendance.AttendanceStatus status,
+            @Parameter(description = "Filter by user ID") @RequestParam(required = false) Long userId) {
         
         Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
-        Page<AttendanceDto> attendance = attendanceService.getAllAttendance(pageable);
-        return ResponseEntity.ok(attendance);
+        
+        // Apply filters
+        if (date != null || status != null || userId != null) {
+            Page<AttendanceDto> attendance = attendanceService.getAllAttendanceWithFilters(pageable, date, status, userId);
+            return ResponseEntity.ok(attendance);
+        } else {
+            Page<AttendanceDto> attendance = attendanceService.getAllAttendance(pageable);
+            return ResponseEntity.ok(attendance);
+        }
     }
     
     /**

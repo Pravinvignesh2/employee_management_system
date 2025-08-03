@@ -47,6 +47,11 @@ public interface AttendanceService {
     Page<AttendanceDto> getAllAttendance(Pageable pageable);
     
     /**
+     * Get all attendance records with pagination and filters
+     */
+    Page<AttendanceDto> getAllAttendanceWithFilters(Pageable pageable, String date, Attendance.AttendanceStatus status, Long userId);
+    
+    /**
      * Get attendance by user
      */
     List<AttendanceDto> getAttendanceByUser(Long userId);

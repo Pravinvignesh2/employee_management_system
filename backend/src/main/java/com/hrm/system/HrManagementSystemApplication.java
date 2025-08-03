@@ -4,8 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * Main Spring Boot Application class for HR Management System
- * 
+ * Main Spring Boot Application class for Employee Management System * 
  * @author HR Management Team
  * @version 1.0.0
  */

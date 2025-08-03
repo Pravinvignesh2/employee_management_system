@@ -14,8 +14,7 @@ import { environment } from '../environments/environment';
       <!-- Loading Spinner -->
       <app-loading-spinner *ngIf="isLoading"></app-loading-spinner>
       
-      <!-- Theme Toggle Button -->
-      <app-theme-toggle *ngIf="isAuthenticated$ | async"></app-theme-toggle>
+
       
       <!-- Login Page -->
       <div *ngIf="!(isAuthenticated$ | async)" class="auth-container">
@@ -27,8 +26,6 @@ import { environment } from '../environments/environment';
         <!-- Header -->
         <app-header 
           [currentUser]="currentUser$ | async"
-          [isDarkTheme]="isDarkTheme"
-          (themeToggle)="toggleTheme()"
           (logout)="onLogout()">
         </app-header>
         
@@ -44,6 +41,9 @@ import { environment } from '../environments/environment';
             <router-outlet></router-outlet>
           </main>
         </div>
+        
+        <!-- AI Chatbot Assistant -->
+        <app-chatbot></app-chatbot>
       </div>
     </div>
   `,

@@ -1,5 +1,4 @@
-# HR Management System
-
+# Employee Management System
 A comprehensive, role-based HR Management System built with Angular frontend and Spring Boot backend, featuring modern UI/UX design principles and robust security.
 
 ## 🎯 Project Overview

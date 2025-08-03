@@ -264,6 +264,14 @@ import { PerformanceService } from '../../services/performance.service';
         </div>
       </div>
     </div>
+
+    <!-- Success Dialog -->
+    <app-success-dialog
+      [isOpen]="showSuccessDialog"
+      [title]="successDialogData.title"
+      [message]="successDialogData.message"
+      (close)="closeSuccessDialog()">
+    </app-success-dialog>
   `,
   styles: [`
     .performance-container {
@@ -877,6 +885,10 @@ export class PerformanceComponent implements OnInit {
   goalsAchieved = 85;
   isCreatingReview = false;
 
+  // Dialog states
+  showSuccessDialog = false;
+  successDialogData = { title: '', message: '' };
+
   constructor(private performanceService: PerformanceService) {}
 
   ngOnInit(): void {
@@ -919,7 +931,19 @@ export class PerformanceComponent implements OnInit {
     // In a real implementation, this would open a modal for creating a new review
     setTimeout(() => {
       this.isCreatingReview = false;
-      alert('New review modal will be implemented. This would allow creating performance reviews for employees.');
+      this.showSuccessMessage('New review modal will be implemented. This would allow creating performance reviews for employees.');
     }, 1000);
+  }
+
+  showSuccessMessage(message: string): void {
+    this.successDialogData = {
+      title: 'Information',
+      message: message
+    };
+    this.showSuccessDialog = true;
+  }
+
+  closeSuccessDialog(): void {
+    this.showSuccessDialog = false;
   }
 } 

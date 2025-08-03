@@ -1,43 +1,50 @@
 import { Component, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { UserService } from '../../services/user.service';
-import { AttendanceService } from '../../services/attendance.service';
-import { User } from '../../models/user.model';
-import { ProjectAssignmentModalComponent } from '../../shared/project-assignment-modal/project-assignment-modal.component';
-import { DocumentUploadModalComponent } from '../../shared/document-upload-modal/document-upload-modal.component';
+import { AuthService } from '../../services/auth.service';
+import { User, UserResponse } from '../../models/user.model';
 import { ProjectService, Project } from '../../services/project.service';
 import { DocumentService, Document } from '../../services/document.service';
-import { AuthService } from '../../services/auth.service';
 
 @Component({
-  selector: 'app-employee-profile',
+  selector: 'app-profile',
   template: `
     <div class="profile-container">
       <!-- Header -->
       <div class="profile-header">
         <div class="header-content">
-          <div class="back-button" (click)="goBack()">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Back
-          </div>
-          <h1>Employee Profile</h1>
+          <h1>My Profile</h1>
           <div class="header-actions">
-            <button class="btn-secondary" (click)="openChat()">
+            <button *ngIf="!isEditMode" class="btn-secondary" (click)="toggleEditMode()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 18.9609 21.7893 19.3358 21.4142C19.7107 21.0391 19.9214 20.5304 19.9214 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              Message
+              Edit Profile
+            </button>
+            <button *ngIf="isEditMode" class="btn-secondary" (click)="saveProfile()" [disabled]="!profileForm.dirty || isSaving">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16L21 8V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="17,21 17,13 7,13 7,21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="7,3 7,8 15,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              {{ isSaving ? 'Saving...' : 'Save Changes' }}
+            </button>
+            <button *ngIf="isEditMode" class="btn-secondary" (click)="cancelEdit()" [disabled]="isSaving">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Cancel
             </button>
           </div>
         </div>
       </div>
 
       <!-- Profile Content -->
-      <div class="profile-content" *ngIf="employee">
-        <!-- Employee Info Card -->
-        <div class="employee-info-card">
+      <div class="profile-content" *ngIf="currentUser">
+        <!-- Profile Info Card -->
+        <div class="profile-info-card">
           <div class="profile-picture">
             <div class="avatar">
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -47,12 +54,12 @@ import { AuthService } from '../../services/auth.service';
             </div>
             <div class="status-indicator" [class]="getStatusClass()"></div>
           </div>
-          <div class="employee-details">
-            <h2>{{ employee.firstName }} {{ employee.lastName }}</h2>
-            <p class="role">{{ employee.role }}</p>
-            <p class="department">{{ employee.department }}</p>
-            <p class="email">{{ employee.email }}</p>
-            <p class="employee-id">ID: {{ employee.employeeId }}</p>
+          <div class="profile-details">
+            <h2>{{ currentUser.firstName }} {{ currentUser.lastName }}</h2>
+            <p class="role">{{ currentUser.role }}</p>
+            <p class="department">{{ currentUser.department }}</p>
+            <p class="email">{{ currentUser.email }}</p>
+            <p class="employee-id">ID: {{ currentUser.employeeId }}</p>
           </div>
         </div>
 
@@ -70,88 +77,129 @@ import { AuthService } from '../../services/auth.service';
 
           <!-- Tab Content -->
           <div class="tab-content">
-            <!-- Overview Tab -->
-            <div *ngIf="activeTab === 'overview'" class="tab-panel">
-              <div class="overview-grid">
-                <div class="info-card">
-                  <h3>Personal Information</h3>
-                  <div class="info-item">
-                    <span class="label">Full Name:</span>
-                    <span class="value">{{ employee.firstName }} {{ employee.lastName }}</span>
-                  </div>
-                  <div class="info-item">
-                    <span class="label">Email:</span>
-                    <span class="value">{{ employee.email }}</span>
-                  </div>
-                                     <div class="info-item">
-                     <span class="label">Phone:</span>
-                     <span class="value">{{ employee.phoneNumber ? employee.phoneNumber : 'Not provided' }}</span>
+                         <!-- Personal Info Tab -->
+             <div *ngIf="activeTab === 'personal'" class="tab-panel">
+               <div class="form-section">
+                 <h3>Personal Information</h3>
+                 
+                 <!-- Read-only view -->
+                 <div *ngIf="!isEditMode" class="info-display">
+                   <div class="info-grid">
+                     <div class="info-item">
+                       <label>First Name</label>
+                                               <span>{{ currentUser.firstName }}</span>
+                     </div>
+                     <div class="info-item">
+                       <label>Last Name</label>
+                                               <span>{{ currentUser.lastName }}</span>
+                     </div>
+                     <div class="info-item">
+                       <label>Phone Number</label>
+                                               <span>{{ currentUser.phoneNumber }}</span>
+                     </div>
+                     <div class="info-item">
+                       <label>Email</label>
+                                               <span>{{ currentUser.email }}</span>
+                     </div>
+                     <div class="info-item">
+                       <label>Role</label>
+                                               <span>{{ currentUser.role }}</span>
+                     </div>
+                     <div class="info-item">
+                       <label>Department</label>
+                                               <span>{{ currentUser.department }}</span>
+                     </div>
+                     <div class="info-item full-width">
+                       <label>Date of Birth</label>
+                       <span>{{ profileForm.get('dateOfBirth')?.value || 'Not provided' }}</span>
+                     </div>
+                     <div class="info-item full-width">
+                       <label>Address</label>
+                       <span>{{ profileForm.get('address')?.value || 'Not provided' }}</span>
+                     </div>
+                     <div class="info-item">
+                       <label>Emergency Contact</label>
+                       <span>{{ profileForm.get('emergencyContact')?.value || 'Not provided' }}</span>
+                     </div>
                    </div>
-                   <div class="info-item">
-                     <span class="label">Date of Birth:</span>
-                     <span class="value">{{ employee.dateOfBirth ? (employee.dateOfBirth | date:'mediumDate') : 'Not provided' }}</span>
-                   </div>
-                </div>
+                 </div>
 
-                <div class="info-card">
-                  <h3>Employment Details</h3>
-                  <div class="info-item">
-                    <span class="label">Employee ID:</span>
-                    <span class="value">{{ employee.employeeId }}</span>
-                  </div>
-                                     <div class="info-item">
-                     <span class="label">Date of Joining:</span>
-                     <span class="value">{{ employee.dateOfJoining ? (employee.dateOfJoining | date:'mediumDate') : 'Not provided' }}</span>
-                   </div>
-                  <div class="info-item">
-                    <span class="label">Status:</span>
-                    <span class="value status-badge" [class]="getStatusClass()">{{ employee.status }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+                 <!-- Edit form -->
+                 <form *ngIf="isEditMode" [formGroup]="profileForm" class="profile-form">
+                   <div class="form-grid">
+                     <div class="form-group">
+                       <label for="firstName">First Name *</label>
+                       <input 
+                         type="text" 
+                         id="firstName"
+                         formControlName="firstName"
+                         class="form-input"
+                         [disabled]="true">
+                       <div class="error-message" *ngIf="profileForm.get('firstName')?.invalid && profileForm.get('firstName')?.touched">
+                         First name is required
+                       </div>
+                     </div>
 
-            <!-- Job Info Tab -->
-            <div *ngIf="activeTab === 'job-info'" class="tab-panel">
-              <div class="job-info-grid">
-                <div class="info-card">
-                  <h3>Position Details</h3>
-                                     <div class="info-item">
-                     <span class="label">Job Title:</span>
-                     <span class="value">{{ employee.role ? employee.role : 'Not specified' }}</span>
-                   </div>
-                   <div class="info-item">
-                     <span class="label">Department:</span>
-                     <span class="value">{{ employee.department }}</span>
-                   </div>
-                   <div class="info-item">
-                     <span class="label">Role:</span>
-                     <span class="value">{{ employee.role }}</span>
-                   </div>
-                   <div class="info-item">
-                     <span class="label">Manager:</span>
-                     <span class="value">{{ employee.managerId ? 'Manager ID: ' + employee.managerId : 'Not assigned' }}</span>
-                   </div>
-                </div>
+                     <div class="form-group">
+                       <label for="lastName">Last Name *</label>
+                       <input 
+                         type="text" 
+                         id="lastName"
+                         formControlName="lastName"
+                         class="form-input"
+                         [disabled]="true">
+                       <div class="error-message" *ngIf="profileForm.get('lastName')?.invalid && profileForm.get('lastName')?.touched">
+                         Last name is required
+                       </div>
+                     </div>
 
-                <div class="info-card">
-                  <h3>Compensation</h3>
-                                     <div class="info-item">
-                     <span class="label">Salary:</span>
-                     <span class="value">Not specified</span>
+                     <div class="form-group">
+                       <label for="phoneNumber">Phone Number *</label>
+                       <input 
+                         type="tel" 
+                         id="phoneNumber"
+                         formControlName="phoneNumber"
+                         class="form-input">
+                       <div class="error-message" *ngIf="profileForm.get('phoneNumber')?.invalid && profileForm.get('phoneNumber')?.touched">
+                         Phone number is required
+                       </div>
+                     </div>
+
+                     <div class="form-group">
+                       <label for="dateOfBirth">Date of Birth</label>
+                       <input 
+                         type="date" 
+                         id="dateOfBirth"
+                         formControlName="dateOfBirth"
+                         class="form-input">
+                     </div>
+
+                     <div class="form-group full-width">
+                       <label for="address">Address</label>
+                       <textarea 
+                         id="address"
+                         formControlName="address"
+                         rows="3"
+                         class="form-textarea"></textarea>
+                     </div>
+
+                     <div class="form-group">
+                       <label for="emergencyContact">Emergency Contact</label>
+                       <input 
+                         type="text" 
+                         id="emergencyContact"
+                         formControlName="emergencyContact"
+                         class="form-input">
+                     </div>
                    </div>
-                   <div class="info-item">
-                     <span class="label">Currency:</span>
-                     <span class="value">USD</span>
-                   </div>
-                </div>
-              </div>
-            </div>
+                 </form>
+               </div>
+             </div>
 
             <!-- Documents Tab -->
             <div *ngIf="activeTab === 'documents'" class="tab-panel">
               <div class="documents-header">
-                <h3>Documents & Certificates</h3>
+                <h3>My Documents</h3>
                 <button class="btn-primary" (click)="uploadDocument()">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -192,49 +240,10 @@ import { AuthService } from '../../services/auth.service';
               </div>
             </div>
 
-            <!-- Attendance Tab -->
-            <div *ngIf="activeTab === 'attendance'" class="tab-panel">
-              <div class="attendance-header">
-                <h3>Attendance Records</h3>
-              </div>
-              <div class="attendance-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Punch In</th>
-                      <th>Punch Out</th>
-                      <th>Working Hours</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr *ngFor="let record of attendanceRecords">
-                      <td>{{ record.date | date:'shortDate' }}</td>
-                      <td>{{ formatTime(record.punchInTime) || '-' }}</td>
-                      <td>{{ formatTime(record.punchOutTime) || '-' }}</td>
-                      <td>{{ formatWorkingHours(record) }}</td>
-                      <td>
-                        <span class="status-badge" [class]="getAttendanceStatusClass(record.status)">
-                          {{ record.status }}
-                        </span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
             <!-- Projects Tab -->
             <div *ngIf="activeTab === 'projects'" class="tab-panel">
               <div class="projects-header">
-                <h3>Projects</h3>
-                <button class="btn-primary" (click)="assignProject()">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  Assign Project
-                </button>
+                <h3>My Projects</h3>
               </div>
               <div class="projects-grid">
                 <div class="project-card" *ngFor="let project of projects">
@@ -256,13 +265,7 @@ import { AuthService } from '../../services/auth.service';
             <!-- Reviews Tab -->
             <div *ngIf="activeTab === 'reviews'" class="tab-panel">
               <div class="reviews-header">
-                <h3>Performance Reviews</h3>
-                <button class="btn-primary" (click)="createReview()">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  Create Review
-                </button>
+                <h3>My Performance Reviews</h3>
               </div>
               <div class="reviews-grid">
                 <div class="review-card" *ngFor="let review of reviews">
@@ -290,31 +293,13 @@ import { AuthService } from '../../services/auth.service';
       <!-- Loading State -->
       <div *ngIf="loading" class="loading-container">
         <div class="loading-spinner"></div>
-        <p>Loading employee profile...</p>
+        <p>Loading profile...</p>
       </div>
-
-      <!-- Error State -->
-      <div *ngIf="error" class="error-container">
-        <div class="error-card">
-          <h3>Error Loading Profile</h3>
-          <p>{{ error }}</p>
-          <button class="btn-primary" (click)="loadEmployee()">Try Again</button>
-        </div>
-      </div>
-
-      <!-- Project Assignment Modal -->
-      <app-project-assignment-modal
-        [isOpen]="showProjectModal"
-        [employeeId]="employee?.id || null"
-        [employeeName]="employee ? employee.firstName + ' ' + employee.lastName : ''"
-        (close)="closeProjectModal()"
-        (assign)="onProjectAssigned($event)">
-      </app-project-assignment-modal>
 
       <!-- Document Upload Modal -->
       <app-document-upload-modal
         [isOpen]="showDocumentModal"
-        [employeeId]="employee?.id || null"
+        [employeeId]="currentUser?.id || null"
         (close)="closeDocumentModal()"
         (upload)="onDocumentUploaded($event)">
       </app-document-upload-modal>
@@ -342,18 +327,10 @@ import { AuthService } from '../../services/auth.service';
       padding: 0 24px;
     }
 
-    .back-button {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      padding: 8px 16px;
-      border-radius: 8px;
-      transition: background-color 0.2s;
-    }
-
-    .back-button:hover {
-      background-color: rgba(255, 255, 255, 0.1);
+    .header-content h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
     }
 
     .header-actions {
@@ -367,7 +344,7 @@ import { AuthService } from '../../services/auth.service';
       padding: 24px;
     }
 
-    .employee-info-card {
+    .profile-info-card {
       background: white;
       border-radius: 16px;
       padding: 24px;
@@ -411,13 +388,13 @@ import { AuthService } from '../../services/auth.service';
       background-color: #6b7280;
     }
 
-    .employee-details h2 {
+    .profile-details h2 {
       margin: 0 0 8px 0;
       font-size: 24px;
       font-weight: 600;
     }
 
-    .employee-details p {
+    .profile-details p {
       margin: 4px 0;
       color: var(--text-secondary);
     }
@@ -472,64 +449,108 @@ import { AuthService } from '../../services/auth.service';
       to { opacity: 1; transform: translateY(0); }
     }
 
-    .overview-grid, .job-info-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 24px;
+    .profile-form {
+      max-width: 800px;
     }
 
-    .info-card {
-      background: var(--background-color);
-      border-radius: 12px;
-      padding: 20px;
+    .form-section {
+      margin-bottom: 32px;
     }
 
-    .info-card h3 {
-      margin: 0 0 16px 0;
-      font-size: 18px;
+    .form-section h3 {
+      margin: 0 0 20px 0;
+      font-size: 20px;
       font-weight: 600;
+      color: var(--text-primary);
     }
 
-    .info-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 0;
-      border-bottom: 1px solid var(--border-color);
+         .form-grid {
+       display: grid;
+       grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+       gap: 20px;
+     }
+
+     .info-display {
+       max-width: 800px;
+     }
+
+     .info-grid {
+       display: grid;
+       grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+       gap: 20px;
+     }
+
+     .info-item {
+       margin-bottom: 20px;
+     }
+
+     .info-item.full-width {
+       grid-column: 1 / -1;
+     }
+
+     .info-item label {
+       display: block;
+       margin-bottom: 6px;
+       font-weight: 500;
+       color: var(--text-secondary);
+       font-size: 14px;
+     }
+
+     .info-item span {
+       display: block;
+       padding: 12px 16px;
+       background: var(--background-color);
+       border: 1px solid var(--border-color);
+       border-radius: 8px;
+       font-size: 14px;
+       color: var(--text-primary);
+       min-height: 20px;
+     }
+
+    .form-group {
+      margin-bottom: 20px;
     }
 
-    .info-item:last-child {
-      border-bottom: none;
+    .form-group.full-width {
+      grid-column: 1 / -1;
     }
 
-    .label {
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
       font-weight: 500;
       color: var(--text-secondary);
+      font-size: 14px;
     }
 
-    .value {
-      font-weight: 600;
+    .form-input, .form-textarea {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+      box-sizing: border-box;
     }
 
-    .status-badge {
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
+    .form-input:focus, .form-textarea:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
 
-    .status-badge.active {
-      background-color: #dcfce7;
-      color: #166534;
+    .form-textarea {
+      resize: vertical;
+      min-height: 80px;
     }
 
-    .status-badge.inactive {
-      background-color: #fef2f2;
+    .error-message {
       color: #dc2626;
+      font-size: 12px;
+      margin-top: 4px;
     }
 
-    .documents-header, .attendance-header, .projects-header, .reviews-header {
+    .documents-header, .projects-header, .reviews-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -610,30 +631,6 @@ import { AuthService } from '../../services/auth.service';
       border-color: var(--primary-color);
     }
 
-    .attendance-table {
-      background: var(--background-color);
-      border-radius: 12px;
-      overflow: hidden;
-    }
-
-    .attendance-table table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    .attendance-table th,
-    .attendance-table td {
-      padding: 12px 16px;
-      text-align: left;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .attendance-table th {
-      background: var(--primary-color);
-      color: white;
-      font-weight: 600;
-    }
-
     .project-header, .review-header {
       display: flex;
       justify-content: space-between;
@@ -702,7 +699,7 @@ import { AuthService } from '../../services/auth.service';
       color: var(--text-secondary);
     }
 
-    .loading-container, .error-container {
+    .loading-container {
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -726,15 +723,8 @@ import { AuthService } from '../../services/auth.service';
       100% { transform: rotate(360deg); }
     }
 
-    .error-card {
-      background: white;
-      border-radius: 12px;
-      padding: 24px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-
     .btn-primary, .btn-secondary {
-      padding: 8px 16px;
+      padding: 10px 20px;
       border-radius: 8px;
       border: none;
       cursor: pointer;
@@ -743,6 +733,7 @@ import { AuthService } from '../../services/auth.service';
       align-items: center;
       gap: 8px;
       transition: all 0.2s;
+      font-size: 14px;
     }
 
     .btn-primary {
@@ -750,8 +741,13 @@ import { AuthService } from '../../services/auth.service';
       color: white;
     }
 
-    .btn-primary:hover {
+    .btn-primary:hover:not(:disabled) {
       background: var(--primary-dark);
+    }
+
+    .btn-primary:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
     }
 
     .btn-secondary {
@@ -760,8 +756,13 @@ import { AuthService } from '../../services/auth.service';
       border: 1px solid rgba(255, 255, 255, 0.3);
     }
 
-    .btn-secondary:hover {
+    .btn-secondary:hover:not(:disabled) {
       background: rgba(255, 255, 255, 0.3);
+    }
+
+    .btn-secondary:disabled {
+      background: rgba(255, 255, 255, 0.1);
+      cursor: not-allowed;
     }
 
     @media (max-width: 768px) {
@@ -769,7 +770,7 @@ import { AuthService } from '../../services/auth.service';
         padding: 16px;
       }
 
-      .employee-info-card {
+      .profile-info-card {
         flex-direction: column;
         text-align: center;
       }
@@ -783,24 +784,22 @@ import { AuthService } from '../../services/auth.service';
         min-width: 120px;
       }
 
-      .overview-grid, .job-info-grid {
+      .form-grid {
         grid-template-columns: 1fr;
       }
     }
   `]
 })
-export class EmployeeProfileComponent implements OnInit {
-  employee: User | null = null;
+export class ProfileComponent implements OnInit {
+  currentUser: UserResponse | null = null;
   loading = true;
-  error = '';
-  activeTab = 'overview';
-  showProjectModal = false;
+  isSaving = false;
+  isEditMode = false;
+  activeTab = 'personal';
   showDocumentModal = false;
   
+  // Mock data for demonstration
   documents: Document[] = [];
-
-  attendanceRecords: any[] = [];
-  attendanceDate = new Date().toISOString().split('T')[0];
 
   projects: Project[] = [];
 
@@ -810,183 +809,193 @@ export class EmployeeProfileComponent implements OnInit {
   ];
 
   tabs = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'job-info', label: 'Job Info' },
+    { id: 'personal', label: 'Personal Info' },
     { id: 'documents', label: 'Documents' },
-    { id: 'attendance', label: 'Attendance' },
     { id: 'projects', label: 'Projects' },
     { id: 'reviews', label: 'Reviews' }
   ];
 
+  profileForm: FormGroup;
+
   constructor(
-    private route: ActivatedRoute,
     private userService: UserService,
-    private attendanceService: AttendanceService,
+    private authService: AuthService,
     private projectService: ProjectService,
     private documentService: DocumentService,
-    private authService: AuthService
-  ) {}
+    private fb: FormBuilder,
+    private route: ActivatedRoute
+  ) {
+    this.profileForm = this.fb.group({
+      firstName: [''],
+      lastName: [''],
+      phoneNumber: ['', Validators.required],
+      dateOfBirth: [''],
+      address: [''],
+      emergencyContact: ['']
+    });
+  }
 
   ngOnInit(): void {
-    this.loadEmployee();
-    this.loadProjects();
-  }
-
-  loadEmployee(): void {
-    this.loading = true;
-    this.error = '';
+    this.loadCurrentUser();
     
-    const employeeId = this.route.snapshot.paramMap.get('id');
-    if (!employeeId) {
-      this.error = 'Employee ID not provided';
+    // Check for query parameters to automatically enter edit mode
+    this.route.queryParams.subscribe(params => {
+      if (params['edit'] === 'true') {
+        // Wait for user to load, then enter edit mode
+        setTimeout(() => {
+          if (this.currentUser) {
+            this.isEditMode = true;
+          }
+        }, 100);
+      }
+    });
+  }
+
+  loadCurrentUser(): void {
+    this.loading = true;
+    const user = this.authService.getCurrentUser();
+    if (user) {
+      this.currentUser = user;
+      this.initializeForm();
+      this.loadProjects(); // Load projects after user is loaded
+      this.loadDocuments(); // Load documents after user is loaded
       this.loading = false;
-      return;
-    }
-
-    this.userService.getUserById(+employeeId).subscribe({
-      next: (user) => {
-        this.employee = user;
-        this.loadAttendanceRecords();
-        this.loadProjects(); // Load projects after employee is loaded
-        this.loadDocuments(); // Load documents after employee is loaded
-        this.loading = false;
-      },
-      error: (error) => {
-        this.error = 'Failed to load employee profile';
-        this.loading = false;
-        console.error('Error loading employee:', error);
-      }
-    });
-  }
-
-  loadAttendanceRecords(): void {
-    if (!this.employee) return;
-
-    this.attendanceService.getAttendanceByUser(this.employee.id!).subscribe({
-      next: (records) => {
-        this.attendanceRecords = records;
-      },
-      error: (error) => {
-        console.error('Error loading attendance records:', error);
-      }
-    });
-  }
-
-  loadProjects(): void {
-    if (this.employee?.id) {
-      this.projectService.getProjectsByEmployee(this.employee.id).subscribe(projects => {
-        this.projects = projects;
+    } else {
+      // If no user in storage, try to get from API
+      this.authService.getCurrentUserInfo().subscribe({
+        next: (userInfo) => {
+          this.currentUser = userInfo;
+          this.initializeForm();
+          this.loadProjects(); // Load projects after user is loaded
+          this.loading = false;
+        },
+        error: (error: any) => {
+          console.error('Error loading current user:', error);
+          this.loading = false;
+        }
       });
     }
   }
 
-  loadDocuments(): void {
-    if (this.employee?.id) {
-      this.documentService.getDocumentsByUser(this.employee.id).subscribe(documents => {
-        this.documents = documents;
+  initializeForm(): void {
+    if (this.currentUser) {
+      this.profileForm.patchValue({
+        firstName: this.currentUser.firstName,
+        lastName: this.currentUser.lastName,
+        phoneNumber: this.currentUser.phoneNumber,
+        dateOfBirth: this.currentUser.dateOfBirth ? new Date(this.currentUser.dateOfBirth).toISOString().split('T')[0] : '',
+        address: this.currentUser.address || '',
+        emergencyContact: this.currentUser.emergencyContact || ''
       });
     }
   }
 
   setActiveTab(tabId: string): void {
     this.activeTab = tabId;
+    // Refresh projects when switching to projects tab
+    if (tabId === 'projects') {
+      this.loadProjects();
+    }
   }
 
   getStatusClass(): string {
-    if (!this.employee) return 'inactive';
-    return this.employee.status === 'ACTIVE' ? 'active' : 'inactive';
+    if (!this.currentUser) return 'inactive';
+    return this.currentUser.status === 'ACTIVE' ? 'active' : 'inactive';
   }
 
   isAdminOrManager(): boolean {
-    const currentUser = this.authService.getCurrentUser();
-    if (!currentUser) return false;
-    return currentUser.role === 'ADMIN' || currentUser.role === 'MANAGER';
-  }
-
-  getAttendanceStatusClass(status: string): string {
-    switch (status) {
-      case 'PRESENT': return 'active';
-      case 'ABSENT': return 'inactive';
-      case 'HALF_DAY': return 'warning';
-      default: return 'inactive';
-    }
+    if (!this.currentUser) return false;
+    return this.currentUser.role === 'ADMIN' || this.currentUser.role === 'MANAGER';
   }
 
   getProjectStatusClass(status: string): string {
     return status === 'active' ? 'active' : 'completed';
   }
 
-  formatWorkingHours(record: any): string {
-    let totalHours = 0;
-    
-    // If working hours are provided, use them
-    if (record.workingHours !== undefined || record.workingMinutes !== undefined) {
-      totalHours = (record.workingHours || 0) + (record.workingMinutes || 0) / 60;
-    } 
-    // Otherwise, calculate from punch in and punch out times
-    else if (record.punchInTime && record.punchOutTime) {
-      const punchIn = new Date(`2000-01-01T${record.punchInTime}`);
-      const punchOut = new Date(`2000-01-01T${record.punchOutTime}`);
-      const diffMs = punchOut.getTime() - punchIn.getTime();
-      totalHours = diffMs / (1000 * 60 * 60); // Convert milliseconds to hours
-    }
-    
-    // If no working hours data available
-    if (totalHours <= 0) {
-      return '-';
-    }
-    
-    if (totalHours < 1) {
-      // Show as decimal for less than 1 hour (e.g., 0.1, 0.2, 0.5)
-      return totalHours.toFixed(1);
-    } else {
-      // Show as hours and minutes for 1 hour or more
-      const hours = Math.floor(totalHours);
-      const minutes = Math.round((totalHours - hours) * 60);
-      return `${hours}h ${minutes}m`;
+  saveProfile(): void {
+    if (this.profileForm.valid && this.currentUser) {
+      this.isSaving = true;
+      const updatedData = {
+        firstName: this.currentUser.firstName,
+        lastName: this.currentUser.lastName,
+        email: this.currentUser.email,
+        phoneNumber: this.profileForm.value.phoneNumber,
+        dateOfBirth: this.profileForm.value.dateOfBirth ? new Date(this.profileForm.value.dateOfBirth) : undefined,
+        address: this.profileForm.value.address,
+        emergencyContact: this.profileForm.value.emergencyContact,
+        role: this.currentUser.role,
+        department: this.currentUser.department
+      };
+
+      this.userService.updateUser(this.currentUser.id, updatedData).subscribe({
+        next: (updatedUser) => {
+          // Refresh user data from backend to ensure we have the latest data
+          this.authService.getCurrentUserInfo().subscribe({
+            next: (refreshedUser) => {
+              this.currentUser = refreshedUser;
+              this.profileForm.markAsPristine();
+              this.isSaving = false;
+              this.isEditMode = false; // Exit edit mode after successful save
+              console.log('Profile updated successfully and refreshed from backend');
+            },
+            error: (error) => {
+              console.error('Error refreshing user data:', error);
+              // Fallback to using the updated user data
+              if (this.currentUser) {
+                this.currentUser = {
+                  ...this.currentUser,
+                  phoneNumber: updatedUser.phoneNumber,
+                  dateOfBirth: updatedUser.dateOfBirth,
+                  address: updatedUser.address,
+                  emergencyContact: updatedUser.emergencyContact
+                } as UserResponse;
+              }
+              this.profileForm.markAsPristine();
+              this.isSaving = false;
+              this.isEditMode = false;
+              console.log('Profile updated successfully');
+            }
+          });
+        },
+        error: (error) => {
+          console.error('Error updating profile:', error);
+          this.isSaving = false;
+        }
+      });
     }
   }
 
-  formatTime(timeString: string): string {
-    if (!timeString) return '';
+  uploadDocument(): void {
+    this.showDocumentModal = true;
+  }
+
+  closeDocumentModal(): void {
+    this.showDocumentModal = false;
+  }
+
+  onDocumentUploaded(documentData: any): void {
+    if (!this.currentUser?.id) return;
     
-    try {
-      // If it's already in HH:MM:SS format, just return it
-      if (timeString.includes(':') && timeString.split(':').length >= 2) {
-        const parts = timeString.split(':');
-        const hours = parts[0].padStart(2, '0');
-        const minutes = parts[1].padStart(2, '0');
-        const seconds = parts[2] ? parts[2].split('.')[0].padStart(2, '0') : '00';
-        return `${hours}:${minutes}:${seconds}`;
+    const documentRequest = {
+      name: documentData.documentName + '.pdf',
+      type: documentData.documentType,
+      description: documentData.description,
+      userId: this.currentUser.id,
+      expiryDate: documentData.expiryDate ? new Date(documentData.expiryDate) : undefined
+    };
+    
+    this.documentService.createDocument(documentRequest).subscribe({
+      next: (document) => {
+        this.loadDocuments(); // Reload documents to show the new upload
+        this.closeDocumentModal();
+        console.log('Document uploaded:', document);
+      },
+      error: (error) => {
+        console.error('Error uploading document:', error);
+        this.closeDocumentModal();
       }
-      
-      // If it's a full date string, parse it
-      const time = new Date(timeString);
-      if (isNaN(time.getTime())) {
-        return timeString; // Return original if parsing fails
-      }
-      
-      const hours = time.getHours().toString().padStart(2, '0');
-      const minutes = time.getMinutes().toString().padStart(2, '0');
-      const seconds = time.getSeconds().toString().padStart(2, '0');
-      
-      return `${hours}:${minutes}:${seconds}`;
-    } catch (error) {
-      console.error('Error formatting time:', timeString, error);
-      return timeString; // Return original if any error occurs
-    }
+    });
   }
-
-  goBack(): void {
-    window.history.back();
-  }
-
-  openChat(): void {
-    // Implement chat functionality
-    console.log('Opening chat with', this.employee?.firstName);
-  }
-
-
 
   downloadDocument(doc: any): void {
     // Generate realistic document content based on document type
@@ -1003,30 +1012,58 @@ export class EmployeeProfileComponent implements OnInit {
       content = this.generateRealisticDocument(doc);
     }
     
-    // Create a blob with the content as PDF
     const blob = new Blob([content], { type: 'application/pdf' });
-    
-    // Create download link
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = doc.name;
-    
-    // Trigger download
     document.body.appendChild(link);
     link.click();
-    
-    // Cleanup
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
-    
     console.log('Downloaded document:', doc.name);
   }
-  
+
+  deleteDocument(doc: any): void {
+    this.documentService.deleteDocument(doc.id).subscribe({
+      next: () => {
+        this.loadDocuments(); // Reload documents to reflect the deletion
+        console.log('Deleted document:', doc.name);
+      },
+      error: (error) => {
+        console.error('Error deleting document:', error);
+      }
+    });
+  }
+
+  loadProjects(): void {
+    if (this.currentUser?.id) {
+      this.projectService.getProjectsByEmployee(this.currentUser.id).subscribe(projects => {
+        this.projects = projects;
+      });
+    }
+  }
+
+  loadDocuments(): void {
+    this.documentService.getCurrentUserDocuments().subscribe(documents => {
+      this.documents = documents;
+    });
+  }
+
+  toggleEditMode(): void {
+    this.isEditMode = true;
+  }
+
+  cancelEdit(): void {
+    this.isEditMode = false;
+    this.profileForm.reset();
+    this.initializeForm();
+  }
+
   private generateRealisticResume(doc: any): string {
-    const employeeName = this.employee ? `${this.employee.firstName} ${this.employee.lastName}` : 'Employee Name';
-    const employeeId = this.employee ? this.employee.employeeId : 'EMP000';
-    const department = this.employee ? this.employee.department : 'Department';
+    const employeeName = this.currentUser ? `${this.currentUser.firstName} ${this.currentUser.lastName}` : 'Employee Name';
+    const employeeId = this.currentUser ? this.currentUser.employeeId : 'EMP000';
+    const department = this.currentUser ? this.currentUser.department : 'Department';
     
     return `RESUME
 
@@ -1059,10 +1096,10 @@ Available upon request
 Generated on: ${new Date().toLocaleDateString()}
 Document: ${doc.name}`;
   }
-  
+
   private generateRealisticCertificate(doc: any): string {
-    const employeeName = this.employee ? `${this.employee.firstName} ${this.employee.lastName}` : 'Employee Name';
-    const employeeId = this.employee ? this.employee.employeeId : 'EMP000';
+    const employeeName = this.currentUser ? `${this.currentUser.firstName} ${this.currentUser.lastName}` : 'Employee Name';
+    const employeeId = this.currentUser ? this.currentUser.employeeId : 'EMP000';
     
     return `CERTIFICATE OF COMPLETION
 
@@ -1082,10 +1119,10 @@ This certificate is valid and recognized by Vibe Coding Solutions.
 
 Document: ${doc.name}`;
   }
-  
+
   private generateRealisticTraining(doc: any): string {
-    const employeeName = this.employee ? `${this.employee.firstName} ${this.employee.lastName}` : 'Employee Name';
-    const employeeId = this.employee ? this.employee.employeeId : 'EMP000';
+    const employeeName = this.currentUser ? `${this.currentUser.firstName} ${this.currentUser.lastName}` : 'Employee Name';
+    const employeeId = this.currentUser ? this.currentUser.employeeId : 'EMP000';
     
     return `TRAINING CERTIFICATE
 
@@ -1107,10 +1144,10 @@ and is valid for professional development records.
 
 Document: ${doc.name}`;
   }
-  
+
   private generateRealisticDocument(doc: any): string {
-    const employeeName = this.employee ? `${this.employee.firstName} ${this.employee.lastName}` : 'Employee Name';
-    const employeeId = this.employee ? this.employee.employeeId : 'EMP000';
+    const employeeName = this.currentUser ? `${this.currentUser.firstName} ${this.currentUser.lastName}` : 'Employee Name';
+    const employeeId = this.currentUser ? this.currentUser.employeeId : 'EMP000';
     
     return `DOCUMENT
 
@@ -1119,7 +1156,7 @@ ${doc.name.toUpperCase()}
 Employee Information:
 Name: ${employeeName}
 Employee ID: ${employeeId}
-Department: ${this.employee ? this.employee.department : 'Department'}
+Department: ${this.currentUser ? this.currentUser.department : 'Department'}
 
 Document Details:
 Type: ${doc.type}
@@ -1130,90 +1167,5 @@ This document has been uploaded to the HR Management System
 and is maintained as part of the employee's official records.
 
 Document: ${doc.name}`;
-  }
-
-  deleteDocument(doc: any): void {
-    this.documentService.deleteDocument(doc.id).subscribe({
-      next: () => {
-        this.loadDocuments(); // Reload documents to reflect the deletion
-        console.log('Deleted document:', doc.name);
-      },
-      error: (error) => {
-        console.error('Error deleting document:', error);
-      }
-    });
-  }
-
-  assignProject(): void {
-    this.showProjectModal = true;
-  }
-
-  closeProjectModal(): void {
-    this.showProjectModal = false;
-  }
-
-  onProjectAssigned(projectData: any): void {
-    // Add the new project using the project service
-    const newProject = {
-      name: projectData.projectName,
-      description: projectData.description,
-      status: projectData.status,
-      role: projectData.role,
-      startDate: new Date(projectData.startDate),
-      endDate: projectData.endDate ? new Date(projectData.endDate) : new Date(),
-      priority: projectData.priority,
-      budget: projectData.budget,
-      employeeId: this.employee?.id || 0,
-      employeeName: this.employee ? `${this.employee.firstName} ${this.employee.lastName}` : 'Unknown'
-    };
-    
-    this.projectService.addProject(newProject).subscribe({
-      next: (project) => {
-        this.loadProjects(); // Reload projects to show the new assignment
-        this.closeProjectModal();
-        console.log('Project assigned:', project);
-      },
-      error: (error) => {
-        console.error('Error assigning project:', error);
-        this.closeProjectModal();
-      }
-    });
-  }
-
-  uploadDocument(): void {
-    this.showDocumentModal = true;
-  }
-
-  closeDocumentModal(): void {
-    this.showDocumentModal = false;
-  }
-
-  onDocumentUploaded(documentData: any): void {
-    if (!this.employee?.id) return;
-    
-    const documentRequest = {
-      name: documentData.documentName + '.pdf',
-      type: documentData.documentType,
-      description: documentData.description,
-      userId: this.employee.id,
-      expiryDate: documentData.expiryDate ? new Date(documentData.expiryDate) : undefined
-    };
-    
-    this.documentService.createDocument(documentRequest).subscribe({
-      next: (document) => {
-        this.loadDocuments(); // Reload documents to show the new upload
-        this.closeDocumentModal();
-        console.log('Document uploaded:', document);
-      },
-      error: (error) => {
-        console.error('Error uploading document:', error);
-        this.closeDocumentModal();
-      }
-    });
-  }
-
-  createReview(): void {
-    // Implement review creation
-    console.log('Create review');
   }
 } 

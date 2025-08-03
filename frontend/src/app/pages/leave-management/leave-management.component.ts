@@ -1,6 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { LeaveService } from '../../services/leave.service';
 import { AuthService } from '../../services/auth.service';
+import { UserService } from '../../services/user.service';
+import { User } from '../../models/user.model';
 import { 
   Leave, 
   LeaveType, 
@@ -89,17 +92,10 @@ import {
         <div class="balance-card">
           <h3>My Leave Balance</h3>
           <div class="balance-grid">
-            <div class="balance-item">
-              <span class="balance-label">Total Leaves:</span>
-              <span class="balance-value">{{ userStatistics.remainingLeaves + userStatistics.approvedLeaves }}</span>
-            </div>
-            <div class="balance-item">
-              <span class="balance-label">Used Leaves:</span>
-              <span class="balance-value">{{ userStatistics.approvedLeaves }}</span>
-            </div>
-            <div class="balance-item">
-              <span class="balance-label">Remaining:</span>
-              <span class="balance-value remaining">{{ userStatistics.remainingLeaves }}</span>
+            <div class="balance-item" *ngFor="let balance of getLeaveBalanceByType()">
+              <span class="balance-label">{{ balance.type }}:</span>
+              <span class="balance-value remaining">{{ balance.remaining }} days</span>
+              <span class="balance-used" *ngIf="balance.used > 0">(Used: {{ balance.used }})</span>
             </div>
             <div class="balance-item">
               <span class="balance-label">Pending:</span>
@@ -158,7 +154,7 @@ import {
               <tr *ngFor="let leave of leaveRecords">
                 <td *ngIf="isAdminOrManager">
                   <div class="employee-info">
-                    <div class="employee-name">{{ leave.employeeName }}</div>
+                    <div class="employee-name">{{ getFullName(leave) }}</div>
                     <div class="employee-id">{{ leave.employeeId }}</div>
                   </div>
                 </td>
@@ -286,6 +282,23 @@ import {
         (submitted)="onRejectionSubmitted($event)"
         (cancelled)="onRejectionCancelled()">
       </app-rejection-modal>
+
+      <!-- Confirm Dialog -->
+      <app-confirm-dialog
+        [isOpen]="showConfirmDialog"
+        [title]="confirmDialogData.title"
+        [message]="confirmDialogData.message"
+        (confirm)="onConfirmAction()"
+        (cancel)="closeConfirmDialog()">
+      </app-confirm-dialog>
+
+      <!-- Success Dialog -->
+      <app-success-dialog
+        [isOpen]="showSuccessDialog"
+        [title]="successDialogData.title"
+        [message]="successDialogData.message"
+        (close)="closeSuccessDialog()">
+      </app-success-dialog>
     </div>
   `,
   styles: [`
@@ -682,15 +695,36 @@ export class LeaveManagementComponent implements OnInit {
   showLeaveDetailsModal = false;
   selectedLeaveForDetails: Leave | null = null;
 
+  // Dialog states
+  showConfirmDialog = false;
+  showSuccessDialog = false;
+  confirmDialogData = { title: '', message: '', action: '', leaveId: 0 };
+  successDialogData = { title: '', message: '' };
+
+  // Cache for user names to avoid multiple API calls
+  private userNamesCache: { [key: number]: string } = {};
+
   constructor(
     private leaveService: LeaveService,
-    private authService: AuthService
+    private authService: AuthService,
+    private userService: UserService,
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
     this.loadCurrentUser();
     this.loadStatistics();
     this.loadLeaveRecords();
+    
+    // Check for query parameter to open leave request modal
+    this.route.queryParams.subscribe(params => {
+      if (params['openRequest'] === 'true') {
+        setTimeout(() => {
+          this.openLeaveRequestModal();
+        }, 100);
+      }
+    });
   }
 
   loadCurrentUser(): void {
@@ -790,18 +824,13 @@ export class LeaveManagementComponent implements OnInit {
   }
 
   approveLeave(leaveId: number): void {
-    if (confirm('Are you sure you want to approve this leave request?')) {
-      this.leaveService.approveLeaveForCurrentUser(leaveId).subscribe(
-        leave => {
-          this.loadLeaveRecords();
-          this.loadStatistics();
-          console.log('Leave request approved successfully');
-        },
-        error => {
-          console.error('Error approving leave request:', error);
-        }
-      );
-    }
+    this.confirmDialogData = {
+      title: 'Approve Leave Request',
+      message: 'Are you sure you want to approve this leave request?',
+      action: 'approve',
+      leaveId: leaveId
+    };
+    this.showConfirmDialog = true;
   }
 
   rejectLeave(leaveId: number): void {
@@ -838,33 +867,23 @@ export class LeaveManagementComponent implements OnInit {
   }
 
   cancelLeave(leaveId: number): void {
-    if (confirm('Are you sure you want to cancel this leave request?')) {
-      this.leaveService.cancelLeave(leaveId).subscribe(
-        leave => {
-          this.loadLeaveRecords();
-          this.loadStatistics();
-          console.log('Leave request cancelled successfully');
-        },
-        error => {
-          console.error('Error cancelling leave request:', error);
-        }
-      );
-    }
+    this.confirmDialogData = {
+      title: 'Cancel Leave Request',
+      message: 'Are you sure you want to cancel this leave request?',
+      action: 'cancel',
+      leaveId: leaveId
+    };
+    this.showConfirmDialog = true;
   }
 
   deleteLeave(leaveId: number): void {
-    if (confirm('Are you sure you want to delete this leave request? This action cannot be undone.')) {
-      this.leaveService.deleteLeave(leaveId).subscribe(
-        () => {
-          this.loadLeaveRecords();
-          this.loadStatistics();
-          console.log('Leave request deleted successfully');
-        },
-        error => {
-          console.error('Error deleting leave request:', error);
-        }
-      );
-    }
+    this.confirmDialogData = {
+      title: 'Delete Leave Request',
+      message: 'Are you sure you want to delete this leave request? This action cannot be undone.',
+      action: 'delete',
+      leaveId: leaveId
+    };
+    this.showConfirmDialog = true;
   }
 
   // Pagination
@@ -920,5 +939,129 @@ export class LeaveManagementComponent implements OnInit {
   canDeleteLeave(leave: Leave): boolean {
     return leave.status === LeaveStatus.PENDING && 
            (leave.userId === this.currentUser.id || this.currentUser.id === 1);
+  }
+
+  onConfirmAction(): void {
+    const { action, leaveId } = this.confirmDialogData;
+    
+    switch (action) {
+      case 'approve':
+        this.leaveService.approveLeaveForCurrentUser(leaveId).subscribe({
+          next: (leave) => {
+            this.loadLeaveRecords();
+            this.loadStatistics();
+            this.closeConfirmDialog();
+            this.showSuccessMessage('Leave request approved successfully!');
+          },
+          error: (error) => {
+            console.error('Error approving leave request:', error);
+            this.closeConfirmDialog();
+            this.showSuccessMessage('Failed to approve leave request. Please try again.');
+          }
+        });
+        break;
+        
+      case 'cancel':
+        this.leaveService.cancelLeave(leaveId).subscribe({
+          next: (leave) => {
+            this.loadLeaveRecords();
+            this.loadStatistics();
+            this.closeConfirmDialog();
+            this.showSuccessMessage('Leave request cancelled successfully!');
+          },
+          error: (error) => {
+            console.error('Error cancelling leave request:', error);
+            this.closeConfirmDialog();
+            this.showSuccessMessage('Failed to cancel leave request. Please try again.');
+          }
+        });
+        break;
+        
+      case 'delete':
+        this.leaveService.deleteLeave(leaveId).subscribe({
+          next: () => {
+            this.loadLeaveRecords();
+            this.loadStatistics();
+            this.closeConfirmDialog();
+            this.showSuccessMessage('Leave request deleted successfully!');
+          },
+          error: (error) => {
+            console.error('Error deleting leave request:', error);
+            this.closeConfirmDialog();
+            this.showSuccessMessage('Failed to delete leave request. Please try again.');
+          }
+        });
+        break;
+    }
+  }
+
+  closeConfirmDialog(): void {
+    this.showConfirmDialog = false;
+    this.confirmDialogData = { title: '', message: '', action: '', leaveId: 0 };
+  }
+
+  showSuccessMessage(message: string): void {
+    this.successDialogData = {
+      title: 'Success!',
+      message: message
+    };
+    this.showSuccessDialog = true;
+  }
+
+  closeSuccessDialog(): void {
+    this.showSuccessDialog = false;
+  }
+
+  getFullName(leave: any): string {
+    // If we have firstName and lastName, use them
+    if (leave.firstName && leave.lastName) {
+      return `${leave.firstName} ${leave.lastName}`;
+    }
+    
+    // If we have a cached name, use it
+    if (leave.userId && this.userNamesCache[leave.userId]) {
+      return this.userNamesCache[leave.userId];
+    }
+    
+    // If employeeName is not generic, use it
+    if (leave.employeeName && !leave.employeeName.includes('Employee')) {
+      return leave.employeeName;
+    }
+    
+    // If we have userId, fetch the user data
+    if (leave.userId && !this.userNamesCache[leave.userId]) {
+      this.userService.getUserById(leave.userId).subscribe({
+        next: (user: User) => {
+          const fullName = `${user.firstName} ${user.lastName}`;
+          this.userNamesCache[leave.userId] = fullName;
+          // Trigger change detection
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          // If fetch fails, cache a fallback
+          this.userNamesCache[leave.userId] = leave.employeeName || 'Unknown Employee';
+        }
+      });
+      return 'Loading...';
+    }
+    
+    return leave.employeeName || 'Unknown Employee';
+  }
+
+  getLeaveBalanceByType(): any[] {
+    if (!this.userStatistics) return [];
+    
+    // Calculate breakdown based on available data
+    const totalLeaves = this.userStatistics.totalLeaves || 0;
+    const usedLeaves = this.userStatistics.approvedLeaves || 0;
+    const remainingLeaves = this.userStatistics.remainingLeaves || 0;
+    
+    // Create a simple breakdown - you can enhance this when backend provides detailed data
+    return [
+      { type: 'Sick Leave', remaining: Math.floor(remainingLeaves * 0.3), used: Math.floor(usedLeaves * 0.3) },
+      { type: 'Personal Leave', remaining: Math.floor(remainingLeaves * 0.2), used: Math.floor(usedLeaves * 0.2) },
+      { type: 'Annual Leave', remaining: Math.floor(remainingLeaves * 0.4), used: Math.floor(usedLeaves * 0.4) },
+      { type: 'Paid Leave', remaining: Math.floor(remainingLeaves * 0.1), used: Math.floor(usedLeaves * 0.1) }
+    ];
   }
 } 

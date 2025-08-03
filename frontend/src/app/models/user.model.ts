@@ -75,7 +75,7 @@ export interface UpdateUserRequest {
   role: UserRole;
   department: Department;
   profileImage?: string;
-  dateOfBirth?: Date;
+  dateOfBirth?: Date | null;
   dateOfJoining?: Date;
   address?: string;
   emergencyContact?: string;
@@ -118,7 +118,10 @@ export interface UserResponse {
   department: Department;
   status: UserStatus;
   profileImage?: string;
+  dateOfBirth?: Date;
   dateOfJoining?: Date;
+  address?: string;
+  emergencyContact?: string;
   lastLoginAt?: Date;
 }
 

@@ -27,7 +27,6 @@ import { UserResponse } from '../../models/user.model';
             </div>
             <div class="user-details">
               <span class="user-name">{{ currentUser.fullName }}</span>
-              <span class="user-role">{{ currentUser.role }}</span>
             </div>
           </div>
           <div class="header-actions">
@@ -186,13 +185,7 @@ import { UserResponse } from '../../models/user.model';
 })
 export class HeaderComponent {
   @Input() currentUser: UserResponse | null = null;
-  @Input() isDarkTheme: boolean = false;
-  @Output() themeToggle = new EventEmitter<void>();
   @Output() logout = new EventEmitter<void>();
-
-  onThemeToggle() {
-    this.themeToggle.emit();
-  }
 
   onLogout() {
     this.logout.emit();

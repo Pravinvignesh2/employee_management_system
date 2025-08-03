@@ -16,8 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Global Exception Handler for the HR Management System
- */
+ * Global Exception Handler for the Employee Management System */
 @ControllerAdvice
 public class GlobalExceptionHandler {
 

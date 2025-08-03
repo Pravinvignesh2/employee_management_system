@@ -4,6 +4,7 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { CommonModule } from '@angular/common';
 
 // Angular Material Modules
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -47,7 +48,10 @@ import { AttendanceComponent } from './pages/attendance/attendance.component';
 import { LeaveManagementComponent } from './pages/leave-management/leave-management.component';
 import { PayrollComponent } from './pages/payroll/payroll.component';
 import { PerformanceComponent } from './pages/performance/performance.component';
-import { SettingsComponent } from './pages/settings/settings.component';
+import { ProfileComponent } from './pages/profile/profile.component';
+import { AdminComponent } from './pages/admin/admin.component';
+import { ManagerComponent } from './pages/manager/manager.component';
+import { SupportComponent } from './pages/support/support.component';
 
 // Shared Components
 import { HeaderComponent } from './shared/header/header.component';
@@ -61,7 +65,11 @@ import { LeaveCalendarComponent } from './shared/leave-calendar/leave-calendar.c
 import { LeavePoliciesComponent } from './shared/leave-policies/leave-policies.component';
 import { LeaveReportsComponent } from './shared/leave-reports/leave-reports.component';
 import { BulkOperationsComponent } from './shared/bulk-operations/bulk-operations.component';
-import { ThemeToggleComponent } from './shared/theme-toggle/theme-toggle.component';
+import { SuccessDialogComponent } from './shared/success-dialog/success-dialog.component';
+import { ProjectAssignmentModalComponent } from './shared/project-assignment-modal/project-assignment-modal.component';
+import { DocumentUploadModalComponent } from './shared/document-upload-modal/document-upload-modal.component';
+import { ThemeToggleComponent } from './shared/theme-toggle.component';
+import { ChatbotComponent } from './shared/chatbot/chatbot.component';
 
 // Guards
 import { AuthGuard } from './guards/auth.guard';
@@ -94,7 +102,10 @@ import { AppRoutingModule } from './app-routing.module';
     LeaveManagementComponent,
     PayrollComponent,
     PerformanceComponent,
-    SettingsComponent,
+    ProfileComponent,
+    AdminComponent,
+    ManagerComponent,
+    SupportComponent,
     HeaderComponent,
     SidebarComponent,
     LoadingSpinnerComponent,
@@ -106,7 +117,11 @@ import { AppRoutingModule } from './app-routing.module';
     LeavePoliciesComponent,
     LeaveReportsComponent,
     BulkOperationsComponent,
-    ThemeToggleComponent
+    SuccessDialogComponent,
+    ThemeToggleComponent,
+    ProjectAssignmentModalComponent,
+    DocumentUploadModalComponent,
+    ChatbotComponent
   ],
   imports: [
     BrowserModule,
@@ -116,6 +131,7 @@ import { AppRoutingModule } from './app-routing.module';
     FormsModule,
     RouterModule,
     AppRoutingModule,
+    CommonModule,
     
     // Angular Material Modules
     MatToolbarModule,

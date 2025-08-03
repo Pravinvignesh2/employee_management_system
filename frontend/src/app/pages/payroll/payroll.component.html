@@ -242,4 +242,21 @@
       </div>
     </div>
   </div>
+
+  <!-- Success Dialog -->
+  <app-success-dialog
+    [isOpen]="showSuccessDialog"
+    [title]="successDialogData.title"
+    [message]="successDialogData.message"
+    (close)="closeSuccessDialog()">
+  </app-success-dialog>
+
+  <!-- Error Dialog -->
+  <app-confirm-dialog
+    [isOpen]="showErrorDialog"
+    [title]="errorDialogData.title"
+    [message]="errorDialogData.message"
+    (confirm)="closeErrorDialog()"
+    (cancel)="closeErrorDialog()">
+  </app-confirm-dialog>
 </div> 

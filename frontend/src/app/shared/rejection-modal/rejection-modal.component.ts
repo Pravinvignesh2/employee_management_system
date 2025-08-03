@@ -1,5 +1,7 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { UserService } from '../../services/user.service';
+import { User } from '../../models/user.model';
 
 @Component({
   selector: 'app-rejection-modal',
@@ -17,7 +19,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
           <div class="leave-info" *ngIf="leaveInfo">
             <div class="info-row">
               <span class="label">Employee:</span>
-              <span class="value">{{ leaveInfo.employeeName }}</span>
+              <span class="value">{{ getFullName() }}</span>
             </div>
             <div class="info-row">
               <span class="label">Leave Type:</span>
@@ -291,8 +293,13 @@ export class RejectionModalComponent {
 
   rejectionForm: FormGroup;
   isSubmitting = false;
+  private userNamesCache: { [key: number]: string } = {};
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private userService: UserService,
+    private cdr: ChangeDetectorRef
+  ) {
     this.rejectionForm = this.fb.group({
       rejectionReason: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(500)]],
       notifyEmployee: [true]
@@ -313,5 +320,43 @@ export class RejectionModalComponent {
 
   close(): void {
     this.cancelled.emit();
+  }
+
+  getFullName(): string {
+    if (!this.leaveInfo) return 'Unknown Employee';
+    
+    // If we have firstName and lastName, use them
+    if (this.leaveInfo.firstName && this.leaveInfo.lastName) {
+      return `${this.leaveInfo.firstName} ${this.leaveInfo.lastName}`;
+    }
+    
+    // If we have a cached name, use it
+    if (this.leaveInfo.userId && this.userNamesCache[this.leaveInfo.userId]) {
+      return this.userNamesCache[this.leaveInfo.userId];
+    }
+    
+    // If employeeName is not generic, use it
+    if (this.leaveInfo.employeeName && !this.leaveInfo.employeeName.includes('Employee')) {
+      return this.leaveInfo.employeeName;
+    }
+    
+    // If we have userId, fetch the user data
+    if (this.leaveInfo.userId && !this.userNamesCache[this.leaveInfo.userId]) {
+      this.userService.getUserById(this.leaveInfo.userId).subscribe({
+        next: (user: User) => {
+          const fullName = `${user.firstName} ${user.lastName}`;
+          this.userNamesCache[this.leaveInfo.userId] = fullName;
+          // Trigger change detection
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          // If fetch fails, cache a fallback
+          this.userNamesCache[this.leaveInfo.userId] = this.leaveInfo.employeeName || 'Unknown Employee';
+        }
+      });
+      return 'Loading...';
+    }
+    
+    return this.leaveInfo.employeeName || 'Unknown Employee';
   }
 } 

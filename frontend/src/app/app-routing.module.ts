@@ -14,7 +14,7 @@ import { AttendanceComponent } from './pages/attendance/attendance.component';
 import { LeaveManagementComponent } from './pages/leave-management/leave-management.component';
 import { PayrollComponent } from './pages/payroll/payroll.component';
 import { PerformanceComponent } from './pages/performance/performance.component';
-import { SettingsComponent } from './pages/settings/settings.component';
+import { ProfileComponent } from './pages/profile/profile.component';
 import { AdminComponent } from './pages/admin/admin.component';
 import { ManagerComponent } from './pages/manager/manager.component';
 import { SupportComponent } from './pages/support/support.component';
@@ -31,18 +31,20 @@ const routes: Routes = [
     canActivate: [AuthGuard]
   },
   
-  // Employee Directory - Accessible by all authenticated users
+  // Employee Directory - Accessible by Admin and Manager only
   {
     path: 'employees',
     component: EmployeeDirectoryComponent,
-    canActivate: [AuthGuard]
+    canActivate: [AuthGuard, RoleGuard],
+    data: { roles: [UserRole.ADMIN, UserRole.MANAGER] }
   },
   
-  // Employee Profile - Accessible by all authenticated users
+  // Employee Profile - Accessible by Admin and Manager only
   {
     path: 'profile/:id',
     component: EmployeeProfileComponent,
-    canActivate: [AuthGuard]
+    canActivate: [AuthGuard, RoleGuard],
+    data: { roles: [UserRole.ADMIN, UserRole.MANAGER] }
   },
   
   // Attendance - Accessible by all authenticated users
@@ -75,10 +77,10 @@ const routes: Routes = [
     data: { roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE] }
   },
   
-  // Settings - Accessible by all authenticated users
+  // Profile - Accessible by all authenticated users
   {
-    path: 'settings',
-    component: SettingsComponent,
+    path: 'profile',
+    component: ProfileComponent,
     canActivate: [AuthGuard]
   },
   

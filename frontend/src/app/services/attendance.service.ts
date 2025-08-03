@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, catchError, of } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { 
   Attendance, 
@@ -118,8 +118,16 @@ export class AttendanceService {
     return this.http.get<Attendance[]>(`${this.apiUrl}/user/${userId}`);
   }
 
-  getAttendanceByUserAndDate(userId: number, date: string): Observable<Attendance> {
-    return this.http.get<Attendance>(`${this.apiUrl}/user/${userId}/date/${date}`);
+  getAttendanceByUserAndDate(userId: number, date: string): Observable<Attendance | null> {
+    return this.http.get<Attendance>(`${this.apiUrl}/user/${userId}/date/${date}`).pipe(
+      catchError(error => {
+        if (error.status === 404) {
+          // Return null when no attendance record exists (this is normal for new users)
+          return of(null);
+        }
+        throw error;
+      })
+    );
   }
 
   getAttendanceByDate(date: string): Observable<Attendance[]> {
@@ -191,10 +199,18 @@ export class AttendanceService {
     return this.getAttendanceByUser(currentUserId);
   }
 
-  getTodayAttendance(): Observable<Attendance> {
+  getTodayAttendance(): Observable<Attendance | null> {
     const currentUserId = this.getCurrentUserId();
     const today = new Date().toISOString().split('T')[0];
-    return this.getAttendanceByUserAndDate(currentUserId, today);
+    return this.getAttendanceByUserAndDate(currentUserId, today).pipe(
+      catchError(error => {
+        if (error.status === 404) {
+          // Return null when no attendance record exists (this is normal for new users)
+          return of(null);
+        }
+        throw error;
+      })
+    );
   }
 
   // Helper method to check if attendance exists for today

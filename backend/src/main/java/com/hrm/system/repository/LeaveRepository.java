@@ -267,4 +267,58 @@ public interface LeaveRepository extends JpaRepository<Leave, Long> {
      * Check if leave exists by ID and user ID
      */
     boolean existsByIdAndUserId(Long id, Long userId);
+    
+    // Paginated methods for filtering
+    /**
+     * Find leaves by user ID with pagination
+     */
+    org.springframework.data.domain.Page<Leave> findByUserId(Long userId, org.springframework.data.domain.Pageable pageable);
+    
+    /**
+     * Find leaves by leave type with pagination
+     */
+    org.springframework.data.domain.Page<Leave> findByLeaveType(Leave.LeaveType leaveType, org.springframework.data.domain.Pageable pageable);
+    
+    /**
+     * Find leaves by status with pagination
+     */
+    org.springframework.data.domain.Page<Leave> findByStatus(Leave.LeaveStatus status, org.springframework.data.domain.Pageable pageable);
+    
+    /**
+     * Find leaves by user ID and leave type with pagination
+     */
+    org.springframework.data.domain.Page<Leave> findByUserIdAndLeaveType(Long userId, Leave.LeaveType leaveType, org.springframework.data.domain.Pageable pageable);
+    
+    /**
+     * Find leaves by user ID and status with pagination
+     */
+    org.springframework.data.domain.Page<Leave> findByUserIdAndStatus(Long userId, Leave.LeaveStatus status, org.springframework.data.domain.Pageable pageable);
+    
+    /**
+     * Find leaves by leave type and status with pagination
+     */
+    org.springframework.data.domain.Page<Leave> findByLeaveTypeAndStatus(Leave.LeaveType leaveType, Leave.LeaveStatus status, org.springframework.data.domain.Pageable pageable);
+    
+    /**
+     * Find leaves by reason containing search query with pagination
+     */
+    org.springframework.data.domain.Page<Leave> findByReasonContainingIgnoreCase(String query, org.springframework.data.domain.Pageable pageable);
+    
+    /**
+     * Find leaves by user ID, leave type, and status with pagination
+     */
+    org.springframework.data.domain.Page<Leave> findByUserIdAndLeaveTypeAndStatus(Long userId, Leave.LeaveType leaveType, Leave.LeaveStatus status, org.springframework.data.domain.Pageable pageable);
+    
+    /**
+     * Find leaves by user ID, leave type, status, start date range, and reason containing search query with pagination
+     */
+    @Query("SELECT l FROM Leave l WHERE l.user.id = :userId AND l.leaveType = :leaveType AND l.status = :status AND l.startDate BETWEEN :startDate AND :endDate AND l.reason LIKE %:query%")
+    org.springframework.data.domain.Page<Leave> findByUserIdAndLeaveTypeAndStatusAndStartDateBetweenAndReasonContainingIgnoreCase(
+        @Param("userId") Long userId, 
+        @Param("leaveType") Leave.LeaveType leaveType, 
+        @Param("status") Leave.LeaveStatus status, 
+        @Param("startDate") java.time.LocalDate startDate, 
+        @Param("endDate") java.time.LocalDate endDate, 
+        @Param("query") String query, 
+        org.springframework.data.domain.Pageable pageable);
 } 

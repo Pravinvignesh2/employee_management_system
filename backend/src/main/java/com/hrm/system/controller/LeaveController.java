@@ -43,21 +43,34 @@ public class LeaveController {
     }
     
     /**
-     * Get all leaves with pagination
+     * Get all leaves with pagination and filters
      */
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    @Operation(summary = "Get all leaves", description = "Get paginated list of all leave requests")
+    @Operation(summary = "Get all leaves", description = "Get paginated list of all leave requests with filters")
     public ResponseEntity<Page<LeaveDto>> getAllLeaves(
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "10") int size,
             @Parameter(description = "Sort field") @RequestParam(defaultValue = "id") String sortBy,
-            @Parameter(description = "Sort direction") @RequestParam(defaultValue = "DESC") String sortDir) {
+            @Parameter(description = "Sort direction") @RequestParam(defaultValue = "DESC") String sortDir,
+            @Parameter(description = "Filter by user ID") @RequestParam(required = false) Long userId,
+            @Parameter(description = "Filter by leave type") @RequestParam(required = false) Leave.LeaveType leaveType,
+            @Parameter(description = "Filter by status") @RequestParam(required = false) Leave.LeaveStatus status,
+            @Parameter(description = "Filter by start date") @RequestParam(required = false) String startDate,
+            @Parameter(description = "Filter by end date") @RequestParam(required = false) String endDate,
+            @Parameter(description = "Search query") @RequestParam(required = false) String query) {
         
         Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
-        Page<LeaveDto> leaves = leaveService.getAllLeaves(pageable);
-        return ResponseEntity.ok(leaves);
+        
+        // Apply filters if provided
+        if (userId != null || leaveType != null || status != null || startDate != null || endDate != null || query != null) {
+            Page<LeaveDto> leaves = leaveService.getAllLeavesWithFilters(pageable, userId, leaveType, status, startDate, endDate, query);
+            return ResponseEntity.ok(leaves);
+        } else {
+            Page<LeaveDto> leaves = leaveService.getAllLeaves(pageable);
+            return ResponseEntity.ok(leaves);
+        }
     }
     
     /**

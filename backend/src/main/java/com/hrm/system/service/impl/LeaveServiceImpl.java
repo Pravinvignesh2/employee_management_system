@@ -57,6 +57,52 @@ public class LeaveServiceImpl implements LeaveService {
     }
     
     @Override
+    public Page<LeaveDto> getAllLeavesWithFilters(Pageable pageable, Long userId, Leave.LeaveType leaveType, Leave.LeaveStatus status, String startDate, String endDate, String query) {
+        if (userId != null && leaveType != null && status != null && startDate != null && endDate != null && query != null) {
+            // All filters provided
+            LocalDate start = LocalDate.parse(startDate);
+            LocalDate end = LocalDate.parse(endDate);
+            return leaveRepository.findByUserIdAndLeaveTypeAndStatusAndStartDateBetweenAndReasonContainingIgnoreCase(userId, leaveType, status, start, end, query, pageable)
+                    .map(LeaveDto::new);
+        } else if (userId != null && leaveType != null && status != null) {
+            // User, type, and status filters
+            return leaveRepository.findByUserIdAndLeaveTypeAndStatus(userId, leaveType, status, pageable)
+                    .map(LeaveDto::new);
+        } else if (userId != null && leaveType != null) {
+            // User and type filters
+            return leaveRepository.findByUserIdAndLeaveType(userId, leaveType, pageable)
+                    .map(LeaveDto::new);
+        } else if (userId != null && status != null) {
+            // User and status filters
+            return leaveRepository.findByUserIdAndStatus(userId, status, pageable)
+                    .map(LeaveDto::new);
+        } else if (leaveType != null && status != null) {
+            // Type and status filters
+            return leaveRepository.findByLeaveTypeAndStatus(leaveType, status, pageable)
+                    .map(LeaveDto::new);
+        } else if (userId != null) {
+            // User filter only
+            return leaveRepository.findByUserId(userId, pageable)
+                    .map(LeaveDto::new);
+        } else if (leaveType != null) {
+            // Type filter only
+            return leaveRepository.findByLeaveType(leaveType, pageable)
+                    .map(LeaveDto::new);
+        } else if (status != null) {
+            // Status filter only
+            return leaveRepository.findByStatus(status, pageable)
+                    .map(LeaveDto::new);
+        } else if (query != null) {
+            // Search query only
+            return leaveRepository.findByReasonContainingIgnoreCase(query, pageable)
+                    .map(LeaveDto::new);
+        } else {
+            // No filters, return all
+            return leaveRepository.findAll(pageable).map(LeaveDto::new);
+        }
+    }
+    
+    @Override
     public Optional<LeaveDto> getLeaveById(Long id) {
         return leaveRepository.findById(id).map(LeaveDto::new);
     }

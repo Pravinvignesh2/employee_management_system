@@ -221,7 +221,10 @@ public class AuthController {
         userResponse.put("department", user.getDepartment());
         userResponse.put("status", user.getStatus());
         userResponse.put("profileImage", user.getProfileImage());
+        userResponse.put("dateOfBirth", user.getDateOfBirth());
         userResponse.put("dateOfJoining", user.getDateOfJoining());
+        userResponse.put("address", user.getAddress());
+        userResponse.put("emergencyContact", user.getEmergencyContact());
         userResponse.put("lastLoginAt", user.getLastLoginAt());
         return userResponse;
     }

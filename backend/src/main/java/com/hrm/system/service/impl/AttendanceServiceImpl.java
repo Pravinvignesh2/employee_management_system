@@ -161,6 +161,46 @@ public class AttendanceServiceImpl implements AttendanceService {
     }
     
     @Override
+    public Page<AttendanceDto> getAllAttendanceWithFilters(Pageable pageable, String date, Attendance.AttendanceStatus status, Long userId) {
+        if (date != null && status != null && userId != null) {
+            // Filter by date, status, and user
+            LocalDate filterDate = LocalDate.parse(date);
+            return attendanceRepository.findByDateAndStatusAndUserId(filterDate, status, userId, pageable)
+                    .map(AttendanceDto::new);
+        } else if (date != null && status != null) {
+            // Filter by date and status
+            LocalDate filterDate = LocalDate.parse(date);
+            return attendanceRepository.findByDateAndStatus(filterDate, status, pageable)
+                    .map(AttendanceDto::new);
+        } else if (date != null && userId != null) {
+            // Filter by date and user
+            LocalDate filterDate = LocalDate.parse(date);
+            return attendanceRepository.findByDateAndUserId(filterDate, userId, pageable)
+                    .map(AttendanceDto::new);
+        } else if (status != null && userId != null) {
+            // Filter by status and user
+            return attendanceRepository.findByStatusAndUserId(status, userId, pageable)
+                    .map(AttendanceDto::new);
+        } else if (date != null) {
+            // Filter by date only
+            LocalDate filterDate = LocalDate.parse(date);
+            return attendanceRepository.findByDate(filterDate, pageable)
+                    .map(AttendanceDto::new);
+        } else if (status != null) {
+            // Filter by status only
+            return attendanceRepository.findByStatus(status, pageable)
+                    .map(AttendanceDto::new);
+        } else if (userId != null) {
+            // Filter by user only
+            return attendanceRepository.findByUserId(userId, pageable)
+                    .map(AttendanceDto::new);
+        } else {
+            // No filters, return all
+            return attendanceRepository.findAll(pageable).map(AttendanceDto::new);
+        }
+    }
+    
+    @Override
     public List<AttendanceDto> getAttendanceByUser(Long userId) {
         return attendanceRepository.findByUserIdOrderByDateDesc(userId)
                 .stream()

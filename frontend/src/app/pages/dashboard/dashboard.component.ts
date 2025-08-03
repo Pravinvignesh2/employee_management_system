@@ -1,8 +1,10 @@
 import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { UserService } from '../../services/user.service';
 import { AttendanceService } from '../../services/attendance.service';
 import { LeaveService } from '../../services/leave.service';
 import { AuthService } from '../../services/auth.service';
+import { DashboardService, DashboardActivity } from '../../services/dashboard.service';
 import { User, UserStatistics } from '../../models/user.model';
 import { AttendanceStatistics } from '../../models/attendance.model';
 import { LeaveStatistics } from '../../models/leave.model';
@@ -55,6 +57,174 @@ import { LeaveStatistics } from '../../models/leave.model';
 
       <!-- Dashboard Content -->
       <div *ngIf="!loading && !error" class="dashboard-content">
+        
+        <!-- Employee Dashboard (For Regular Employees) -->
+        <div class="employee-dashboard" *ngIf="!isAdminOrManager">
+          
+          <!-- Welcome Section -->
+          <div class="welcome-section">
+            <h2>Welcome, {{ currentUser?.firstName || 'Employee' }}!</h2>
+            <p>Here's your personalized dashboard</p>
+          </div>
+
+          <!-- Employee Quick Stats -->
+          <div class="employee-stats-grid">
+            
+            <!-- My Attendance -->
+            <div class="stat-card employee-card">
+              <div class="stat-header">
+                <div class="stat-icon attendance-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div class="stat-info">
+                  <h3>My Attendance</h3>
+                  <p>Today's status</p>
+                </div>
+              </div>
+              <div class="stat-content">
+                <div class="stat-item">
+                  <span class="stat-label">Today's Status</span>
+                  <span class="stat-value" [class]="getTodayAttendanceStatus()">
+                    {{ getTodayAttendanceStatus() }}
+                  </span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">This Month</span>
+                  <span class="stat-value">{{ getMonthlyAttendanceRate() }}%</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">Working Hours</span>
+                  <span class="stat-value">{{ getTodayWorkingHours() }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Leaves Left -->
+            <div class="stat-card employee-card">
+              <div class="stat-header">
+                <div class="stat-icon leave-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div class="stat-info">
+                  <h3>Leaves Left</h3>
+                  <p>Your leave balance</p>
+                </div>
+              </div>
+              <div class="stat-content">
+                <div class="stat-item">
+                  <span class="stat-label">Annual Leave</span>
+                  <span class="stat-value">{{ getLeaveBalance('ANNUAL') }} days</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">Sick Leave</span>
+                  <span class="stat-value">{{ getLeaveBalance('SICK') }} days</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">Personal Leave</span>
+                  <span class="stat-value">{{ getLeaveBalance('PERSONAL') }} days</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Upcoming Holidays -->
+            <div class="stat-card employee-card">
+              <div class="stat-header">
+                <div class="stat-icon holiday-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L15.09 8.26L22 9L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9L8.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div class="stat-info">
+                  <h3>Upcoming Holidays</h3>
+                  <p>Next few holidays</p>
+                </div>
+              </div>
+              <div class="stat-content">
+                <div class="stat-item" *ngFor="let holiday of getUpcomingHolidays()">
+                  <span class="stat-label">{{ holiday.name }}</span>
+                  <span class="stat-value">{{ holiday.date | date:'shortDate' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Self-Service Options -->
+          <div class="self-service-section">
+            <h3>Self-Service Options</h3>
+            <div class="service-grid">
+              <div class="service-card clickable" (click)="navigateToAttendance()">
+                <div class="service-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <h4>Mark Attendance</h4>
+                <p>Punch in/out and view records</p>
+              </div>
+              
+              <div class="service-card clickable" (click)="navigateToLeave()">
+                <div class="service-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <h4>Request Leave</h4>
+                <p>Apply for leave and check status</p>
+              </div>
+              
+              <div class="service-card clickable" (click)="navigateToProfile()">
+                <div class="service-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 11C14.2091 11 16 9.20914 16 7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7C8 9.20914 9.79086 11 12 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <h4>Update Profile</h4>
+                <p>Edit personal information</p>
+              </div>
+              
+              <div class="service-card clickable" (click)="navigateToPayroll()">
+                <div class="service-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2V6M12 18V22M4.93 4.93L7.76 7.76M16.24 16.24L19.07 19.07M2 12H6M18 12H22M4.93 19.07L7.76 16.24M16.24 7.76L19.07 4.93" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <h4>View Payroll</h4>
+                <p>Check salary and payslips</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Birthday/Work Anniversary Messages -->
+          <div class="messages-section" *ngIf="getSpecialMessages().length > 0">
+            <h3>Special Messages</h3>
+            <div class="message-cards">
+              <div class="message-card" *ngFor="let message of getSpecialMessages()">
+                <div class="message-icon" [class]="message.type">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L15.09 8.26L22 9L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9L8.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div class="message-content">
+                  <h4>{{ message.title }}</h4>
+                  <p>{{ message.message }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         
         <!-- Statistics Cards (Admin/Manager Only) -->
         <div class="stats-grid" *ngIf="isAdminOrManager">
@@ -184,7 +354,7 @@ import { LeaveStatistics } from '../../models/leave.model';
             </div>
             <div class="stat-content">
               <div class="quick-actions">
-                <button class="action-btn primary">
+                <button class="action-btn primary" (click)="navigateToEmployees()">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -193,21 +363,21 @@ import { LeaveStatistics } from '../../models/leave.model';
                   </svg>
                   Add Employee
                 </button>
-                <button class="action-btn accent">
+                <button class="action-btn accent" (click)="navigateToLeaveManagement()">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                   Approve Leaves
                 </button>
-                <button class="action-btn warning">
+                <button class="action-btn warning" (click)="navigateToAttendance()">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
                     <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                   Mark Attendance
                 </button>
-                <button class="action-btn neutral">
+                <button class="action-btn neutral" (click)="navigateToReports()">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -223,23 +393,35 @@ import { LeaveStatistics } from '../../models/leave.model';
 
         </div>
 
-        <!-- Recent Activities -->
-        <div class="recent-activities">
+        <!-- Recent Activities (Admin/Manager Only) -->
+        <div class="recent-activities" *ngIf="isAdminOrManager">
           <div class="section-header">
             <h2>Recent Activities</h2>
             <p>Latest updates and notifications</p>
           </div>
           <div class="activities-list">
             <div *ngFor="let activity of recentActivities" class="activity-item">
-              <div class="activity-icon">
+              <div class="activity-icon" [ngClass]="'icon-' + activity.type.toLowerCase()">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </div>
               <div class="activity-content">
-                <p class="activity-text">{{ activity.text }}</p>
-                <span class="activity-time">{{ activity.time | date:'short' }}</span>
+                <p class="activity-text">{{ activity.description }}</p>
+                <span class="activity-time">{{ activity.timestamp | date:'short' }}</span>
+              </div>
+            </div>
+            <!-- Empty state when no activities -->
+            <div *ngIf="recentActivities.length === 0" class="activity-item empty-state">
+              <div class="activity-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="activity-content">
+                <p class="activity-text">No recent activities</p>
+                <span class="activity-time">Check back later for updates</span>
               </div>
             </div>
           </div>
@@ -490,9 +672,10 @@ import { LeaveStatistics } from '../../models/leave.model';
     }
 
     .quick-actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+      display: flex;
+      flex-direction: row;
       gap: 12px;
+      flex-wrap: wrap;
     }
 
     .action-btn {
@@ -507,6 +690,9 @@ import { LeaveStatistics } from '../../models/leave.model';
       cursor: pointer;
       transition: all 0.2s ease;
       color: white;
+      flex: 1;
+      min-width: 140px;
+      justify-content: center;
     }
 
     .action-btn.primary {
@@ -574,12 +760,31 @@ import { LeaveStatistics } from '../../models/leave.model';
     .activity-icon {
       width: 40px;
       height: 40px;
-      background: #667eea;
       border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
       color: white;
+    }
+
+    .icon-user_created {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .icon-leave_approved {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+
+    .icon-leave_rejected {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+
+    .icon-performance_review {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    }
+
+    .icon-attendance_marked {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     }
 
     .activity-content {
@@ -595,6 +800,179 @@ import { LeaveStatistics } from '../../models/leave.model';
     .activity-time {
       color: #6b7280;
       font-size: 12px;
+    }
+
+    /* Employee Dashboard Styles */
+    .employee-dashboard {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .welcome-section {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 32px;
+      border-radius: 16px;
+      text-align: center;
+    }
+
+    .welcome-section h2 {
+      margin: 0 0 8px 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+
+    .welcome-section p {
+      margin: 0;
+      opacity: 0.9;
+      font-size: 16px;
+    }
+
+    .employee-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+    }
+
+    .employee-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 24px;
+      transition: all 0.3s ease;
+    }
+
+    .employee-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .self-service-section {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .self-service-section h3 {
+      margin: 0 0 20px 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .service-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+    }
+
+    .service-card {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .service-card.clickable {
+      cursor: pointer;
+    }
+
+    .service-card.clickable:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+      border-color: #667eea;
+    }
+
+    .service-icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 16px;
+      background: #667eea;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+
+    .service-card h4 {
+      margin: 0 0 8px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .service-card p {
+      margin: 0;
+      font-size: 14px;
+      color: #6b7280;
+    }
+
+    .messages-section {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .messages-section h3 {
+      margin: 0 0 20px 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .message-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .message-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .message-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .message-icon.birthday {
+      background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+      color: white;
+    }
+
+    .message-icon.anniversary {
+      background: linear-gradient(135deg, #4ecdc4, #44a08d);
+      color: white;
+    }
+
+    .message-content h4 {
+      margin: 0 0 4px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .message-content p {
+      margin: 0;
+      font-size: 14px;
+      color: #6b7280;
     }
 
     @media (max-width: 768px) {
@@ -622,7 +1000,13 @@ import { LeaveStatistics } from '../../models/leave.model';
       }
 
       .quick-actions {
-        grid-template-columns: 1fr;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .action-btn {
+        min-width: auto;
+        width: 100%;
       }
     }
   `]
@@ -636,18 +1020,15 @@ export class DashboardComponent implements OnInit {
   isAdminOrManager = false;
   loading = true;
   error = '';
-  recentActivities: any[] = [
-    { text: 'New employee John Doe joined the company', time: new Date() },
-    { text: 'Leave request approved for Jane Smith', time: new Date(Date.now() - 3600000) },
-    { text: 'Team meeting scheduled for tomorrow at 10 AM', time: new Date(Date.now() - 7200000) },
-    { text: 'Performance review completed for Mike Johnson', time: new Date(Date.now() - 10800000) }
-  ];
+  recentActivities: DashboardActivity[] = [];
   
   constructor(
     private userService: UserService,
     private attendanceService: AttendanceService,
     private leaveService: LeaveService,
-    private authService: AuthService
+    private authService: AuthService,
+    private dashboardService: DashboardService,
+    private router: Router
   ) {}
   
   ngOnInit(): void {
@@ -696,15 +1077,40 @@ export class DashboardComponent implements OnInit {
         error: (error) => {
           console.error('Error loading leave statistics:', error);
           this.error = 'Failed to load leave statistics';
-        },
-        complete: () => {
-          this.loading = false;
         }
       });
+
+      // Load recent activities
+      this.loadRecentActivities();
     } else {
       // For regular employees, just set loading to false
       this.loading = false;
     }
+  }
+
+  loadRecentActivities(): void {
+    // Try to get activities from backend first, fallback to aggregated data
+    this.dashboardService.getRecentActivities(10).subscribe({
+      next: (activities) => {
+        this.recentActivities = activities;
+        this.loading = false;
+      },
+      error: (error) => {
+        console.error('Error loading recent activities from backend, using fallback:', error);
+        // Fallback to aggregated data from different services
+        this.dashboardService.getRecentActivitiesFallback(10).subscribe({
+          next: (activities) => {
+            this.recentActivities = activities;
+            this.loading = false;
+          },
+          error: (fallbackError) => {
+            console.error('Error loading fallback activities:', fallbackError);
+            this.recentActivities = [];
+            this.loading = false;
+          }
+        });
+      }
+    });
   }
   
   refreshData(): void {
@@ -735,5 +1141,113 @@ export class DashboardComponent implements OnInit {
     if (rate >= 80) return 'success';
     if (rate >= 60) return 'warning';
     return 'danger';
+  }
+
+  // Employee Dashboard Methods
+  getTodayAttendanceStatus(): string {
+    if (!this.currentUser) return 'Unknown';
+    
+    // This would be fetched from attendance service
+    // For now, return a default status
+    return 'Present';
+  }
+
+  getMonthlyAttendanceRate(): number {
+    if (!this.currentUser) return 0;
+    
+    // This would be calculated from attendance data
+    // For now, return a default rate
+    return 95;
+  }
+
+  getTodayWorkingHours(): string {
+    if (!this.currentUser) return '0h 0m';
+    
+    // This would be calculated from today's attendance
+    // For now, return default hours
+    return '8h 30m';
+  }
+
+  getLeaveBalance(leaveType: string): number {
+    // This would be fetched from leave service
+    switch (leaveType) {
+      case 'ANNUAL': return 15;
+      case 'SICK': return 10;
+      case 'PERSONAL': return 5;
+      default: return 0;
+    }
+  }
+
+  getUpcomingHolidays(): any[] {
+    // This would be fetched from a holiday service
+    return [
+      { name: 'Christmas', date: new Date('2025-12-25') },
+      { name: 'New Year', date: new Date('2026-01-01') },
+      { name: 'Republic Day', date: new Date('2025-01-26') }
+    ];
+  }
+
+  getSpecialMessages(): any[] {
+    const messages = [];
+    const today = new Date();
+    
+    // Check for birthday
+    if (this.currentUser?.dateOfBirth) {
+      const birthDate = new Date(this.currentUser.dateOfBirth);
+      if (birthDate.getMonth() === today.getMonth() && birthDate.getDate() === today.getDate()) {
+        messages.push({
+          type: 'birthday',
+          title: 'Happy Birthday! 🎉',
+          message: `Wishing you a fantastic birthday, ${this.currentUser.firstName}!`
+        });
+      }
+    }
+    
+    // Check for work anniversary
+    if (this.currentUser?.dateOfJoining) {
+      const joiningDate = new Date(this.currentUser.dateOfJoining);
+      if (joiningDate.getMonth() === today.getMonth() && joiningDate.getDate() === today.getDate()) {
+        const years = today.getFullYear() - joiningDate.getFullYear();
+        messages.push({
+          type: 'anniversary',
+          title: 'Work Anniversary! 🎊',
+          message: `Congratulations on ${years} year${years > 1 ? 's' : ''} with us!`
+        });
+      }
+    }
+    
+    return messages;
+  }
+
+  // Navigation Methods
+  navigateToAttendance(): void {
+    this.router.navigate(['/attendance']);
+  }
+
+  navigateToLeave(): void {
+    // Navigate to leave management with query parameter to open request modal
+    this.router.navigate(['/leaves'], { queryParams: { openRequest: 'true' } });
+  }
+
+  navigateToProfile(): void {
+    this.router.navigate(['/profile'], { queryParams: { edit: 'true' } });
+  }
+
+  navigateToPayroll(): void {
+    this.router.navigate(['/payroll']);
+  }
+
+  // Admin/Manager Navigation Methods
+  navigateToEmployees(): void {
+    // Navigate to employee directory with query parameter to open add employee modal
+    this.router.navigate(['/employees'], { queryParams: { openAddModal: 'true' } });
+  }
+
+  navigateToLeaveManagement(): void {
+    this.router.navigate(['/leaves']);
+  }
+
+  navigateToReports(): void {
+    this.router.navigate(['/reports']);
   }
 } 

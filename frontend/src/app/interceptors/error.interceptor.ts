@@ -49,8 +49,13 @@ export class ErrorInterceptor implements HttpInterceptor {
           }
         }
 
-        // Show error message to user
-        this.showErrorSnackBar(errorMessage);
+        // Don't show 404 errors for attendance endpoints (normal for new users)
+        if (error.status === 404 && request.url.includes('/attendance')) {
+          // Skip showing error for attendance 404s
+        } else {
+          // Show error message to user
+          this.showErrorSnackBar(errorMessage);
+        }
         
         return throwError(() => error);
       })

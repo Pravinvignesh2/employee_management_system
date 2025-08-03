@@ -183,4 +183,47 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
      */
     @Query("SELECT a FROM Attendance a WHERE a.date = :date AND a.punchInTime IS NOT NULL AND a.punchOutTime IS NOT NULL AND (a.punchOutTime - a.punchInTime) > :maxHours ORDER BY a.user.firstName ASC")
     List<Attendance> findOvertime(@Param("date") LocalDate date, @Param("maxHours") long maxHours);
+    
+    // Paginated methods for filtering
+    /**
+     * Find attendance records by date, status, and user ID with pagination
+     */
+    @Query("SELECT a FROM Attendance a WHERE a.date = :date AND a.status = :status AND a.user.id = :userId ORDER BY a.date DESC")
+    org.springframework.data.domain.Page<Attendance> findByDateAndStatusAndUserId(@Param("date") LocalDate date, @Param("status") Attendance.AttendanceStatus status, @Param("userId") Long userId, org.springframework.data.domain.Pageable pageable);
+    
+    /**
+     * Find attendance records by date and status with pagination
+     */
+    @Query("SELECT a FROM Attendance a WHERE a.date = :date AND a.status = :status ORDER BY a.date DESC")
+    org.springframework.data.domain.Page<Attendance> findByDateAndStatus(@Param("date") LocalDate date, @Param("status") Attendance.AttendanceStatus status, org.springframework.data.domain.Pageable pageable);
+    
+    /**
+     * Find attendance records by date and user ID with pagination
+     */
+    @Query("SELECT a FROM Attendance a WHERE a.date = :date AND a.user.id = :userId ORDER BY a.date DESC")
+    org.springframework.data.domain.Page<Attendance> findByDateAndUserId(@Param("date") LocalDate date, @Param("userId") Long userId, org.springframework.data.domain.Pageable pageable);
+    
+    /**
+     * Find attendance records by status and user ID with pagination
+     */
+    @Query("SELECT a FROM Attendance a WHERE a.status = :status AND a.user.id = :userId ORDER BY a.date DESC")
+    org.springframework.data.domain.Page<Attendance> findByStatusAndUserId(@Param("status") Attendance.AttendanceStatus status, @Param("userId") Long userId, org.springframework.data.domain.Pageable pageable);
+    
+    /**
+     * Find attendance records by date with pagination
+     */
+    @Query("SELECT a FROM Attendance a WHERE a.date = :date ORDER BY a.date DESC")
+    org.springframework.data.domain.Page<Attendance> findByDate(@Param("date") LocalDate date, org.springframework.data.domain.Pageable pageable);
+    
+    /**
+     * Find attendance records by status with pagination
+     */
+    @Query("SELECT a FROM Attendance a WHERE a.status = :status ORDER BY a.date DESC")
+    org.springframework.data.domain.Page<Attendance> findByStatus(@Param("status") Attendance.AttendanceStatus status, org.springframework.data.domain.Pageable pageable);
+    
+    /**
+     * Find attendance records by user ID with pagination
+     */
+    @Query("SELECT a FROM Attendance a WHERE a.user.id = :userId ORDER BY a.date DESC")
+    org.springframework.data.domain.Page<Attendance> findByUserId(@Param("userId") Long userId, org.springframework.data.domain.Pageable pageable);
 } 
