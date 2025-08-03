@@ -201,7 +201,7 @@ export class AttendanceService {
 
   getTodayAttendance(): Observable<Attendance | null> {
     const currentUserId = this.getCurrentUserId();
-    const today = new Date().toISOString().split('T')[0];
+    const today = this.getTodayDateString();
     return this.getAttendanceByUserAndDate(currentUserId, today).pipe(
       catchError(error => {
         if (error.status === 404) {
@@ -216,7 +216,7 @@ export class AttendanceService {
   // Helper method to check if attendance exists for today
   hasTodayAttendance(): Observable<boolean> {
     const currentUserId = this.getCurrentUserId();
-    const today = new Date().toISOString().split('T')[0];
+    const today = this.getTodayDateString();
     return this.hasPunchedIn(currentUserId, today);
   }
 
@@ -297,6 +297,11 @@ export class AttendanceService {
   formatDate(date: string): string {
     if (!date) return '';
     return new Date(date).toLocaleDateString();
+  }
+
+  // Helper method to get today's date in local timezone
+  getTodayDateString(): string {
+    return new Date().toLocaleDateString('en-CA'); // Returns YYYY-MM-DD format in local timezone
   }
 
   calculateWorkingHours(punchInTime: string, punchOutTime: string): { hours: number; minutes: number } {

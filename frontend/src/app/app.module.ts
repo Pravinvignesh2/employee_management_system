@@ -71,6 +71,8 @@ import { ProjectAssignmentModalComponent } from './shared/project-assignment-mod
 import { DocumentUploadModalComponent } from './shared/document-upload-modal/document-upload-modal.component';
 import { ThemeToggleComponent } from './shared/theme-toggle.component';
 import { ChatbotComponent } from './shared/chatbot/chatbot.component';
+import { GoalModalComponent } from './shared/goal-modal/goal-modal.component';
+import { FeedbackModalComponent } from './shared/feedback-modal/feedback-modal.component';
 
 // Guards
 import { AuthGuard } from './guards/auth.guard';
@@ -87,6 +89,7 @@ import { AttendanceService } from './services/attendance.service';
 import { LeaveService } from './services/leave.service';
 import { PayrollService } from './services/payroll.service';
 import { PerformanceService } from './services/performance.service';
+import { PerformanceManagementService } from './services/performance-management.service';
 import { ThemeService } from './services/theme.service';
 
 // Routes
@@ -123,7 +126,9 @@ import { AppRoutingModule } from './app-routing.module';
     ThemeToggleComponent,
     ProjectAssignmentModalComponent,
     DocumentUploadModalComponent,
-    ChatbotComponent
+    ChatbotComponent,
+    GoalModalComponent,
+    FeedbackModalComponent
   ],
   imports: [
     BrowserModule,
@@ -174,6 +179,7 @@ import { AppRoutingModule } from './app-routing.module';
     LeaveService,
     PayrollService,
     PerformanceService,
+    PerformanceManagementService,
     ThemeService,
     AuthGuard,
     RoleGuard,

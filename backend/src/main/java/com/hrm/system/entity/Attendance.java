@@ -26,8 +26,10 @@ public class Attendance {
     @NotNull(message = "Date is required")
     private LocalDate date;
     
+    @Column(columnDefinition = "TIME")
     private LocalTime punchInTime;
     
+    @Column(columnDefinition = "TIME")
     private LocalTime punchOutTime;
     
     private String punchInLocation;
@@ -47,8 +49,10 @@ public class Attendance {
     
     private String notes;
     
+    @Column(columnDefinition = "TIMESTAMP")
     private LocalDateTime createdAt;
     
+    @Column(columnDefinition = "TIMESTAMP")
     private LocalDateTime updatedAt;
     
     @PrePersist
@@ -116,19 +120,39 @@ public class Attendance {
     }
     
     public LocalTime getPunchInTime() {
-        return punchInTime;
+        try {
+            return punchInTime;
+        } catch (Exception e) {
+            // If there's a time precision issue, return null
+            return null;
+        }
     }
     
     public void setPunchInTime(LocalTime punchInTime) {
-        this.punchInTime = punchInTime;
+        if (punchInTime != null) {
+            // Truncate to seconds to avoid nano precision issues
+            this.punchInTime = punchInTime.truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+        } else {
+            this.punchInTime = null;
+        }
     }
     
     public LocalTime getPunchOutTime() {
-        return punchOutTime;
+        try {
+            return punchOutTime;
+        } catch (Exception e) {
+            // If there's a time precision issue, return null
+            return null;
+        }
     }
     
     public void setPunchOutTime(LocalTime punchOutTime) {
-        this.punchOutTime = punchOutTime;
+        if (punchOutTime != null) {
+            // Truncate to seconds to avoid nano precision issues
+            this.punchOutTime = punchOutTime.truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+        } else {
+            this.punchOutTime = null;
+        }
     }
     
     public String getPunchInLocation() {

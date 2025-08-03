@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
+import { PerformanceManagementService, PerformanceGoal, Feedback, Appraisal, AISuggestion } from '../../services/performance-management.service';
+import { UserService } from '../../services/user.service';
 
 @Component({
   selector: 'app-performance-management',
@@ -85,7 +87,7 @@ import { AuthService } from '../../services/auth.service';
               </div>
               <div class="feedback-list">
                 <div *ngFor="let feedback of peerFeedback.slice(0, 3)" class="feedback-item">
-                  <div class="feedback-author">{{ feedback.author }}</div>
+                  <div class="feedback-author">{{ feedback.reviewerName }}</div>
                   <div class="feedback-rating">
                     <span *ngFor="let star of [1,2,3,4,5]" class="star" [class.filled]="star <= feedback.rating">★</span>
                   </div>
@@ -101,7 +103,7 @@ import { AuthService } from '../../services/auth.service';
               </div>
               <div class="feedback-list">
                 <div *ngFor="let feedback of managerFeedback.slice(0, 3)" class="feedback-item">
-                  <div class="feedback-author">{{ feedback.author }}</div>
+                  <div class="feedback-author">{{ feedback.reviewerName }}</div>
                   <div class="feedback-rating">
                     <span *ngFor="let star of [1,2,3,4,5]" class="star" [class.filled]="star <= feedback.rating">★</span>
                   </div>
@@ -117,7 +119,7 @@ import { AuthService } from '../../services/auth.service';
               </div>
               <div class="feedback-list">
                 <div *ngFor="let feedback of selfFeedback.slice(0, 3)" class="feedback-item">
-                  <div class="feedback-author">{{ feedback.author }}</div>
+                  <div class="feedback-author">{{ feedback.reviewerName }}</div>
                   <div class="feedback-rating">
                     <span *ngFor="let star of [1,2,3,4,5]" class="star" [class.filled]="star <= feedback.rating">★</span>
                   </div>
@@ -155,7 +157,7 @@ import { AuthService } from '../../services/auth.service';
                     <span class="appraisal-rating">{{ appraisal.rating }}/5</span>
                   </div>
                   <div class="appraisal-details">
-                    <p><strong>Manager:</strong> {{ appraisal.manager }}</p>
+                    <p><strong>Manager:</strong> {{ appraisal.managerName }}</p>
                     <p><strong>Key Achievements:</strong> {{ appraisal.achievements }}</p>
                     <p><strong>Areas for Improvement:</strong> {{ appraisal.improvements }}</p>
                   </div>
@@ -194,6 +196,23 @@ import { AuthService } from '../../services/auth.service';
         </div>
       </div>
     </div>
+    
+    <!-- Goal Modal -->
+    <app-goal-modal 
+      *ngIf="showGoalModal"
+      [goal]="editingGoal"
+      (save)="onGoalSave($event)"
+      (closeModal)="closeGoalModal()"
+    ></app-goal-modal>
+    
+    <!-- Feedback Modal -->
+    <app-feedback-modal 
+      *ngIf="showFeedbackModal"
+      [isRequesting]="isRequestingFeedback"
+      [availableUsers]="availableUsers"
+      (save)="onFeedbackSave($event)"
+      (closeModal)="closeFeedbackModal()"
+    ></app-feedback-modal>
   `,
   styles: [`
     .performance-container {
@@ -741,19 +760,31 @@ import { AuthService } from '../../services/auth.service';
 })
 export class PerformanceManagementComponent implements OnInit {
   currentUser: any;
-  goals: any[] = [];
-  peerFeedback: any[] = [];
-  managerFeedback: any[] = [];
-  selfFeedback: any[] = [];
+  goals: PerformanceGoal[] = [];
+  peerFeedback: Feedback[] = [];
+  managerFeedback: Feedback[] = [];
+  selfFeedback: Feedback[] = [];
   performanceRatings: any[] = [];
-  appraisals: any[] = [];
-  aiSuggestions: any[] = [];
+  appraisals: Appraisal[] = [];
+  aiSuggestions: AISuggestion[] = [];
+  
+  // Modal states
+  showGoalModal = false;
+  showFeedbackModal = false;
+  editingGoal: PerformanceGoal | undefined = undefined;
+  isRequestingFeedback = false;
+  availableUsers: any[] = [];
 
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private performanceService: PerformanceManagementService,
+    private userService: UserService
+  ) {}
 
   ngOnInit(): void {
     this.loadCurrentUser();
     this.loadPerformanceData();
+    this.loadAvailableUsers();
   }
 
   loadCurrentUser(): void {
@@ -761,136 +792,220 @@ export class PerformanceManagementComponent implements OnInit {
   }
 
   loadPerformanceData(): void {
-    // Mock data - in real app, this would come from services
-    this.goals = [
-      {
-        id: 1,
-        title: 'Increase Sales Performance',
-        description: 'Achieve 20% increase in quarterly sales targets',
-        status: 'on-track',
-        progress: 75,
-        target: '₹500K',
-        current: '₹375K'
-      },
-      {
-        id: 2,
-        title: 'Complete Advanced Training',
-        description: 'Finish the leadership development program',
-        status: 'at-risk',
-        progress: 45,
-        target: '100%',
-        current: '45%'
-      },
-      {
-        id: 3,
-        title: 'Improve Team Collaboration',
-        description: 'Implement new collaboration tools and processes',
-        status: 'completed',
-        progress: 100,
-        target: '100%',
-        current: '100%'
-      }
-    ];
-
-    this.peerFeedback = [
-      { author: 'John Smith', rating: 4, comment: 'Great team player and always willing to help.' },
-      { author: 'Sarah Johnson', rating: 5, comment: 'Excellent communication skills and leadership.' },
-      { author: 'Mike Davis', rating: 4, comment: 'Very reliable and delivers quality work.' }
-    ];
-
-    this.managerFeedback = [
-      { author: 'Manager A', rating: 4, comment: 'Strong performance this quarter. Keep up the good work.' },
-      { author: 'Manager B', rating: 5, comment: 'Exceeded expectations in project delivery.' }
-    ];
-
-    this.selfFeedback = [
-      { author: 'Self Assessment', rating: 4, comment: 'I feel I have improved in time management.' },
-      { author: 'Self Assessment', rating: 3, comment: 'Need to work on public speaking skills.' }
-    ];
-
-    this.performanceRatings = [
-      { period: 'Q1 2024', value: 4.2 },
-      { period: 'Q2 2024', value: 4.5 },
-      { period: 'Q3 2024', value: 4.1 },
-      { period: 'Q4 2024', value: 4.3 }
-    ];
-
-    this.appraisals = [
-      {
-        period: 'Q4 2024',
-        rating: 4.3,
-        manager: 'Sarah Wilson',
-        achievements: 'Successfully led the new product launch project',
-        improvements: 'Could improve time management for complex tasks'
-      },
-      {
-        period: 'Q3 2024',
-        rating: 4.1,
-        manager: 'Sarah Wilson',
-        achievements: 'Met all quarterly targets and mentored junior team members',
-        improvements: 'Need to enhance presentation skills'
-      }
-    ];
-
-    this.aiSuggestions = [
-      {
-        id: 1,
-        title: 'Enhance Time Management',
-        category: 'Productivity',
-        priority: 'high',
-        type: 'improvement',
-        description: 'Based on your recent performance data, consider using the Pomodoro technique to improve focus and productivity.'
-      },
-      {
-        id: 2,
-        title: 'Leadership Development',
-        category: 'Career Growth',
-        priority: 'medium',
-        type: 'opportunity',
-        description: 'Your team feedback indicates strong leadership potential. Consider enrolling in the advanced leadership program.'
-      },
-      {
-        id: 3,
-        title: 'Technical Skills Update',
-        category: 'Skills',
-        priority: 'low',
-        type: 'improvement',
-        description: 'Stay updated with the latest industry trends by attending the upcoming tech conference.'
-      }
-    ];
+    // Load data from service
+    this.loadGoals();
+    this.loadFeedback();
+    this.loadAppraisals();
+    this.loadAISuggestions();
   }
 
-  openGoalModal(): void {
-    // Implementation for opening goal modal
-    console.log('Opening goal modal');
+  loadGoals(): void {
+    if (this.currentUser) {
+      this.performanceService.getGoalsByUser(this.currentUser.id).subscribe({
+        next: (goals) => {
+          this.goals = goals;
+        },
+        error: (error) => {
+          console.error('Error loading goals:', error);
+          // Fallback to mock data
+          this.goals = this.performanceService.getMockGoals();
+        }
+      });
+    }
   }
 
-  openFeedbackModal(): void {
-    // Implementation for opening feedback modal
-    console.log('Opening feedback modal');
+  loadFeedback(): void {
+    if (this.currentUser) {
+      this.performanceService.getFeedbackByRecipient(this.currentUser.id).subscribe({
+        next: (feedbacks) => {
+          this.peerFeedback = feedbacks.filter(f => f.type === 'PEER');
+          this.managerFeedback = feedbacks.filter(f => f.type === 'MANAGER');
+          this.selfFeedback = feedbacks.filter(f => f.type === 'SELF');
+        },
+        error: (error) => {
+          console.error('Error loading feedback:', error);
+          // Fallback to mock data
+          const mockFeedbacks = this.performanceService.getMockFeedback();
+          this.peerFeedback = mockFeedbacks.filter(f => f.type === 'PEER');
+          this.managerFeedback = mockFeedbacks.filter(f => f.type === 'MANAGER');
+          this.selfFeedback = mockFeedbacks.filter(f => f.type === 'SELF');
+        }
+      });
+    }
+  }
+
+  loadAppraisals(): void {
+    if (this.currentUser) {
+      this.performanceService.getAppraisalsByEmployee(this.currentUser.id).subscribe({
+        next: (appraisals) => {
+          this.appraisals = appraisals;
+          // Generate performance ratings from appraisals
+          this.performanceRatings = appraisals.map(appraisal => ({
+            period: appraisal.period,
+            value: appraisal.rating
+          }));
+        },
+        error: (error) => {
+          console.error('Error loading appraisals:', error);
+          // Fallback to mock data
+          this.appraisals = this.performanceService.getMockAppraisals();
+          this.performanceRatings = [
+            { period: 'Q1 2024', value: 4.2 },
+            { period: 'Q2 2024', value: 4.5 },
+            { period: 'Q3 2024', value: 4.1 },
+            { period: 'Q4 2024', value: 4.3 }
+          ];
+        }
+      });
+    }
+  }
+
+  loadAISuggestions(): void {
+    if (this.currentUser) {
+      this.performanceService.getSuggestionsByUser(this.currentUser.id).subscribe({
+        next: (suggestions) => {
+          this.aiSuggestions = suggestions;
+        },
+        error: (error) => {
+          console.error('Error loading AI suggestions:', error);
+          // Fallback to mock data
+          this.aiSuggestions = this.performanceService.getMockSuggestions();
+        }
+      });
+    }
+  }
+
+  loadAvailableUsers(): void {
+    this.userService.getUsers(0, 100).subscribe({
+      next: (response: any) => {
+        this.availableUsers = response.content.filter((user: any) => user.id !== this.currentUser?.id);
+      },
+      error: (error: any) => {
+        console.error('Error loading users:', error);
+      }
+    });
+  }
+
+  openGoalModal(goal?: PerformanceGoal): void {
+    this.editingGoal = goal || undefined;
+    this.showGoalModal = true;
+  }
+
+  openFeedbackModal(isRequesting = false): void {
+    this.isRequestingFeedback = isRequesting;
+    this.showFeedbackModal = true;
   }
 
   refreshData(): void {
     this.loadPerformanceData();
   }
 
-  updateGoal(goal: any): void {
-    // Implementation for updating goal
-    console.log('Updating goal:', goal);
+  onGoalSave(goalData: PerformanceGoal): void {
+    if (this.editingGoal) {
+      // Update existing goal
+      this.performanceService.updateGoal(this.editingGoal.id!, goalData).subscribe({
+        next: (updatedGoal) => {
+          const index = this.goals.findIndex(g => g.id === updatedGoal.id);
+          if (index !== -1) {
+            this.goals[index] = updatedGoal;
+          }
+          this.closeGoalModal();
+        },
+        error: (error) => {
+          console.error('Error updating goal:', error);
+        }
+      });
+    } else {
+      // Create new goal
+      goalData.userId = this.currentUser.id;
+      this.performanceService.createGoal(goalData).subscribe({
+        next: (newGoal) => {
+          this.goals.push(newGoal);
+          this.closeGoalModal();
+        },
+        error: (error) => {
+          console.error('Error creating goal:', error);
+        }
+      });
+    }
   }
 
-  viewGoalDetails(goal: any): void {
+  closeGoalModal(): void {
+    this.showGoalModal = false;
+    this.editingGoal = undefined;
+  }
+
+  onFeedbackSave(feedbackData: Feedback): void {
+    if (this.isRequestingFeedback) {
+      // Request feedback - this would typically send a notification
+      console.log('Requesting feedback:', feedbackData);
+      this.closeFeedbackModal();
+    } else {
+      // Submit feedback
+      feedbackData.reviewerId = this.currentUser.id;
+      this.performanceService.createFeedback(feedbackData).subscribe({
+        next: (newFeedback) => {
+          // Add to appropriate feedback list
+          if (newFeedback.type === 'PEER') {
+            this.peerFeedback.push(newFeedback);
+          } else if (newFeedback.type === 'MANAGER') {
+            this.managerFeedback.push(newFeedback);
+          } else if (newFeedback.type === 'SELF') {
+            this.selfFeedback.push(newFeedback);
+          }
+          this.closeFeedbackModal();
+        },
+        error: (error) => {
+          console.error('Error submitting feedback:', error);
+        }
+      });
+    }
+  }
+
+  closeFeedbackModal(): void {
+    this.showFeedbackModal = false;
+    this.isRequestingFeedback = false;
+  }
+
+  updateGoal(goal: PerformanceGoal): void {
+    this.openGoalModal(goal);
+  }
+
+  viewGoalDetails(goal: PerformanceGoal): void {
     // Implementation for viewing goal details
     console.log('Viewing goal details:', goal);
   }
 
-  implementSuggestion(suggestion: any): void {
-    // Implementation for implementing AI suggestion
-    console.log('Implementing suggestion:', suggestion);
+  implementSuggestion(suggestion: AISuggestion): void {
+    const notes = prompt('Enter implementation notes:');
+    if (notes !== null) {
+      this.performanceService.implementSuggestion(suggestion.id!, notes).subscribe({
+        next: (updatedSuggestion) => {
+          const index = this.aiSuggestions.findIndex(s => s.id === updatedSuggestion.id);
+          if (index !== -1) {
+            this.aiSuggestions[index] = updatedSuggestion;
+          }
+        },
+        error: (error) => {
+          console.error('Error implementing suggestion:', error);
+        }
+      });
+    }
   }
 
-  dismissSuggestion(suggestion: any): void {
-    // Implementation for dismissing AI suggestion
-    console.log('Dismissing suggestion:', suggestion);
+  dismissSuggestion(suggestion: AISuggestion): void {
+    if (confirm('Are you sure you want to dismiss this suggestion?')) {
+      this.performanceService.dismissSuggestion(suggestion.id!).subscribe({
+        next: (updatedSuggestion) => {
+          const index = this.aiSuggestions.findIndex(s => s.id === updatedSuggestion.id);
+          if (index !== -1) {
+            this.aiSuggestions[index] = updatedSuggestion;
+          }
+        },
+        error: (error) => {
+          console.error('Error dismissing suggestion:', error);
+        }
+      });
+    }
   }
 } 

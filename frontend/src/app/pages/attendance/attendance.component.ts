@@ -707,7 +707,7 @@ export class AttendanceComponent implements OnInit {
   pageSize = 10;
 
   // Filters
-  selectedDate = new Date().toISOString().split('T')[0];
+  selectedDate = new Date().toLocaleDateString('en-CA'); // Use local timezone
   selectedStatus = '';
 
   // Dialog states
@@ -742,16 +742,25 @@ export class AttendanceComponent implements OnInit {
   }
 
   loadTodayStatus(): void {
-    const today = new Date().toISOString().split('T')[0];
+    // Use local timezone instead of UTC to match backend
+    const today = this.attendanceService.getTodayDateString();
     
     // First check if user has punched in/out for today
-    this.attendanceService.hasCurrentUserPunchedIn(today).subscribe(
-      hasPunchedIn => this.hasPunchedIn = hasPunchedIn
-    );
+    this.attendanceService.hasCurrentUserPunchedIn(today).subscribe({
+      next: (hasPunchedIn) => this.hasPunchedIn = hasPunchedIn,
+      error: (error) => {
+        console.error('Error checking punch-in status:', error);
+        this.hasPunchedIn = false;
+      }
+    });
 
-    this.attendanceService.hasCurrentUserPunchedOut(today).subscribe(
-      hasPunchedOut => this.hasPunchedOut = hasPunchedOut
-    );
+    this.attendanceService.hasCurrentUserPunchedOut(today).subscribe({
+      next: (hasPunchedOut) => this.hasPunchedOut = hasPunchedOut,
+      error: (error) => {
+        console.error('Error checking punch-out status:', error);
+        this.hasPunchedOut = false;
+      }
+    });
 
     // Try to get today's attendance record
     this.attendanceService.getTodayAttendance().subscribe({
@@ -770,8 +779,7 @@ export class AttendanceComponent implements OnInit {
         // Handle any other errors
         console.error('Error loading today\'s attendance:', error);
         this.todayAttendance = null;
-        this.hasPunchedIn = false;
-        this.hasPunchedOut = false;
+        // Don't reset hasPunchedIn/hasPunchedOut here as they might be set by the individual checks above
       }
     });
   }

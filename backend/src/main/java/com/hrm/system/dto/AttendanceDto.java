@@ -104,6 +104,15 @@ public class AttendanceDto {
         this.punchOutTime = punchOutTime;
     }
     
+    // Custom getters to handle time formatting
+    public String getPunchInTimeString() {
+        return punchInTime != null ? punchInTime.toString() : null;
+    }
+    
+    public String getPunchOutTimeString() {
+        return punchOutTime != null ? punchOutTime.toString() : null;
+    }
+    
     public String getPunchInLocation() {
         return punchInLocation;
     }
