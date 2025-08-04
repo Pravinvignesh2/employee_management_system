@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { UserService } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
 import { User, UserResponse } from '../../models/user.model';
@@ -823,7 +823,8 @@ export class ProfileComponent implements OnInit {
     private projectService: ProjectService,
     private documentService: DocumentService,
     private fb: FormBuilder,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private router: Router
   ) {
     this.profileForm = this.fb.group({
       firstName: [''],
@@ -845,6 +846,8 @@ export class ProfileComponent implements OnInit {
         setTimeout(() => {
           if (this.currentUser) {
             this.isEditMode = true;
+            // Clear the query parameter after entering edit mode
+            this.router.navigate(['/profile'], { replaceUrl: true });
           }
         }, 100);
       }
@@ -920,7 +923,7 @@ export class ProfileComponent implements OnInit {
         lastName: this.currentUser.lastName,
         email: this.currentUser.email,
         phoneNumber: this.profileForm.value.phoneNumber,
-        dateOfBirth: this.profileForm.value.dateOfBirth ? new Date(this.profileForm.value.dateOfBirth) : undefined,
+        dateOfBirth: this.profileForm.value.dateOfBirth ? this.profileForm.value.dateOfBirth : undefined,
         address: this.profileForm.value.address,
         emergencyContact: this.profileForm.value.emergencyContact,
         role: this.currentUser.role,

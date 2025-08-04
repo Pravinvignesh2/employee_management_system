@@ -1023,6 +1023,10 @@ export class DashboardComponent implements OnInit {
   loading = true;
   error = '';
   recentActivities: DashboardActivity[] = [];
+  todayAttendance: any = null; // Added for today's attendance
+  userAttendanceStats: any = null; // Added for user's attendance statistics
+  userLeaves: any[] = []; // Added for user's leave records
+  leaveBalance: { [key: string]: number } = {}; // Added for calculated leave balance
   
   constructor(
     private userService: UserService,
@@ -1036,53 +1040,51 @@ export class DashboardComponent implements OnInit {
   ngOnInit(): void {
     this.loadCurrentUser();
     this.loadDashboardData();
+    this.loadAttendanceData(); // Add this line to load attendance data
   }
 
   loadCurrentUser(): void {
     this.currentUser = this.authService.getCurrentUser();
     this.isAdminOrManager = this.authService.hasAnyRole(['ADMIN', 'MANAGER']);
   }
-  
+
   loadDashboardData(): void {
     this.loading = true;
-    this.error = '';
     
-    // Only load statistics for admin/manager
+    // Load user statistics only for admin/manager
     if (this.isAdminOrManager) {
-      // Load user statistics
       this.userService.getUserStatistics().subscribe({
         next: (stats) => {
           this.userStatistics = stats;
+          this.loading = false;
         },
         error: (error) => {
           console.error('Error loading user statistics:', error);
-          this.error = 'Failed to load user statistics';
+          this.loading = false;
         }
       });
-      
-      // Load attendance statistics
+
+      // Load attendance statistics for admins/managers
       this.attendanceService.getAttendanceStatistics().subscribe({
         next: (stats) => {
           this.attendanceStatistics = stats;
         },
         error: (error) => {
           console.error('Error loading attendance statistics:', error);
-          this.error = 'Failed to load attendance statistics';
         }
       });
-      
-      // Load leave statistics
+
+      // Load leave statistics for admins/managers
       this.leaveService.getLeaveStatistics().subscribe({
         next: (stats) => {
           this.leaveStatistics = stats;
         },
         error: (error) => {
           console.error('Error loading leave statistics:', error);
-          this.error = 'Failed to load leave statistics';
         }
       });
 
-      // Load recent activities
+      // Load recent activities for admins/managers
       this.loadRecentActivities();
     } else {
       // For regular employees, just set loading to false
@@ -1090,7 +1092,102 @@ export class DashboardComponent implements OnInit {
     }
   }
 
+  // Add new method to load attendance data
+  loadAttendanceData(): void {
+    if (this.currentUser) {
+      // Load today's attendance for the current user
+      this.attendanceService.getTodayAttendance().subscribe({
+        next: (attendance) => {
+          this.todayAttendance = attendance;
+        },
+        error: (error) => {
+          console.error('Error loading today\'s attendance:', error);
+        }
+      });
+
+      // Load user's attendance statistics
+      this.attendanceService.getUserAttendanceStatistics(this.currentUser.id).subscribe({
+        next: (stats: any) => {
+          this.userAttendanceStats = stats;
+        },
+        error: (error: any) => {
+          console.error('Error loading user attendance statistics:', error);
+        }
+      });
+
+      // Load user's leave records to calculate balance
+      this.leaveService.getCurrentUserLeaves().subscribe({
+        next: (leaves: any[]) => {
+          this.userLeaves = leaves;
+          this.calculateLeaveBalance();
+        },
+        error: (error: any) => {
+          console.error('Error loading user leaves:', error);
+        }
+      });
+    }
+  }
+
+  // Add method to calculate leave balance from actual leave records
+  calculateLeaveBalance(): void {
+    if (!this.userLeaves) return;
+
+    const currentYear = new Date().getFullYear();
+    const approvedLeaves = this.userLeaves.filter(leave => 
+      leave.status === 'APPROVED' && 
+      new Date(leave.startDate).getFullYear() === currentYear
+    );
+
+    // Calculate used days by leave type
+    const usedByType: { [key: string]: number } = {};
+    approvedLeaves.forEach(leave => {
+      const type = leave.leaveType;
+      const days = leave.totalDays || 1;
+      usedByType[type] = (usedByType[type] || 0) + days;
+    });
+
+    // Default leave allowances (can be made configurable)
+    const defaultAllowances = {
+      'ANNUAL': 20,
+      'SICK': 10,
+      'PERSONAL': 5,
+      'MATERNITY': 90,
+      'PATERNITY': 14,
+      'BEREAVEMENT': 5,
+      'UNPAID': 0
+    };
+
+    // Calculate remaining leaves
+    this.leaveBalance = {};
+    Object.keys(defaultAllowances).forEach(type => {
+      const used = usedByType[type] || 0;
+      const allowance = defaultAllowances[type as keyof typeof defaultAllowances];
+      this.leaveBalance[type] = Math.max(0, allowance - used);
+    });
+  }
+
+  getLeaveBalance(leaveType: string): number {
+    if (!this.leaveBalance) {
+      // Return default values if data not loaded yet
+      switch (leaveType) {
+        case 'ANNUAL': return 20;
+        case 'SICK': return 10;
+        case 'PERSONAL': return 5;
+        default: return 0;
+      }
+    }
+
+    // Use calculated balance from actual leave records
+    return this.leaveBalance[leaveType] || 0;
+  }
+
   loadRecentActivities(): void {
+    // Only load recent activities for admin/manager
+    if (!this.isAdminOrManager) {
+      this.recentActivities = [];
+      return;
+    }
+
     // Try to get activities from backend first, fallback to aggregated data
     this.dashboardService.getRecentActivities(5).subscribe({
       next: (activities) => {
@@ -1145,39 +1242,60 @@ export class DashboardComponent implements OnInit {
     return 'danger';
   }
 
-  // Employee Dashboard Methods
+  // Employee Dashboard Methods - Updated to use real data
   getTodayAttendanceStatus(): string {
     if (!this.currentUser) return 'Unknown';
     
-    // This would be fetched from attendance service
-    // For now, return a default status
-    return 'Present';
+    if (this.todayAttendance) {
+      if (this.todayAttendance.status === 'PRESENT') {
+        return 'Present';
+      } else if (this.todayAttendance.status === 'ABSENT') {
+        return 'Absent';
+      } else if (this.todayAttendance.status === 'HALF_DAY') {
+        return 'Half Day';
+      } else if (this.todayAttendance.status === 'LATE') {
+        return 'Late';
+      }
+    }
+    
+    // Check if user has punched in today
+    if (this.todayAttendance?.punchInTime && !this.todayAttendance?.punchOutTime) {
+      return 'Present';
+    }
+    
+    return 'Not Started';
   }
 
   getMonthlyAttendanceRate(): number {
-    if (!this.currentUser) return 0;
+    if (!this.currentUser || !this.userAttendanceStats) return 0;
     
-    // This would be calculated from attendance data
-    // For now, return a default rate
-    return 95;
+    return this.userAttendanceStats.monthlyAttendanceRate || 0;
   }
 
   getTodayWorkingHours(): string {
-    if (!this.currentUser) return '0h 0m';
+    if (!this.currentUser || !this.todayAttendance) return '0h 0m';
     
-    // This would be calculated from today's attendance
-    // For now, return default hours
-    return '8h 30m';
-  }
-
-  getLeaveBalance(leaveType: string): number {
-    // This would be fetched from leave service
-    switch (leaveType) {
-      case 'ANNUAL': return 15;
-      case 'SICK': return 10;
-      case 'PERSONAL': return 5;
-      default: return 0;
+    if (this.todayAttendance.workingHours !== undefined || this.todayAttendance.workingMinutes !== undefined) {
+      const hours = this.todayAttendance.workingHours || 0;
+      const minutes = this.todayAttendance.workingMinutes || 0;
+      return `${hours}h ${minutes}m`;
     }
+    
+    // Calculate from punch in/out times if available
+    if (this.todayAttendance.punchInTime && this.todayAttendance.punchOutTime) {
+      const punchIn = new Date(`2000-01-01T${this.todayAttendance.punchInTime}`);
+      const punchOut = new Date(`2000-01-01T${this.todayAttendance.punchOutTime}`);
+      const diffMs = punchOut.getTime() - punchIn.getTime();
+      const totalHours = diffMs / (1000 * 60 * 60);
+      
+      if (totalHours > 0) {
+        const hours = Math.floor(totalHours);
+        const minutes = Math.round((totalHours - hours) * 60);
+        return `${hours}h ${minutes}m`;
+      }
+    }
+    
+    return '0h 0m';
   }
 
   getUpcomingHolidays(): any[] {

@@ -54,7 +54,16 @@ public class LeaveDto {
         this.approvedBy = leave.getApprovedBy() != null ? leave.getApprovedBy().getId() : null;
         this.approvedByName = leave.getApprovedBy() != null ? leave.getApprovedBy().getFullName() : null;
         this.approvedAt = leave.getApprovedAt();
-        this.rejectionReason = leave.getApprovalComments();
+        
+        // Set rejection reason only for rejected leaves, approval comments for approved leaves
+        if (leave.getStatus() == Leave.LeaveStatus.REJECTED) {
+            this.rejectionReason = leave.getApprovalComments();
+        } else if (leave.getStatus() == Leave.LeaveStatus.APPROVED && leave.getApprovalComments() != null) {
+            this.rejectionReason = leave.getApprovalComments(); // This will be displayed as "Approval Comments" in frontend
+        } else {
+            this.rejectionReason = null;
+        }
+        
         this.createdAt = leave.getCreatedAt();
         this.updatedAt = leave.getUpdatedAt();
     }
