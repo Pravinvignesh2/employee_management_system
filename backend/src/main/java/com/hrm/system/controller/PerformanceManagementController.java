@@ -9,6 +9,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 import java.util.Map;
@@ -30,7 +31,7 @@ public class PerformanceManagementController {
     // ==================== PERFORMANCE GOALS ====================
     
     @PostMapping("/goals")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYEE')")
     public ResponseEntity<PerformanceGoalDto> createGoal(@RequestBody PerformanceGoalDto goalDto) {
         try {
             User currentUser = getCurrentUser();
@@ -269,15 +270,15 @@ public class PerformanceManagementController {
     
     @PostMapping("/appraisals")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public ResponseEntity<AppraisalDto> createAppraisal(@RequestBody AppraisalDto appraisalDto) {
+    public ResponseEntity<?> createAppraisal(@Valid @RequestBody AppraisalDto appraisalDto) {
         try {
             User currentUser = getCurrentUser();
             AppraisalDto createdAppraisal = performanceManagementService.createAppraisal(appraisalDto, currentUser);
             return ResponseEntity.ok(createdAppraisal);
         } catch (SecurityException e) {
-            return ResponseEntity.status(403).build();
+            return ResponseEntity.status(403).body(e.getMessage());
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
     
@@ -316,6 +317,20 @@ public class PerformanceManagementController {
             User currentUser = getCurrentUser();
             List<AppraisalDto> appraisals = performanceManagementService.getAppraisalsByEmployee(employeeId, currentUser);
             return ResponseEntity.ok(appraisals);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/rating-trends/{employeeId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYEE')")
+    public ResponseEntity<List<RatingTrendPointDto>> getRatingTrendsByEmployee(@PathVariable Long employeeId) {
+        try {
+            User currentUser = getCurrentUser();
+            List<RatingTrendPointDto> points = performanceManagementService.getRatingTrendsByEmployee(employeeId, currentUser);
+            return ResponseEntity.ok(points);
         } catch (SecurityException e) {
             return ResponseEntity.status(403).build();
         } catch (Exception e) {
@@ -590,6 +605,80 @@ public class PerformanceManagementController {
             User currentUser = getCurrentUser();
             List<String> departments = performanceManagementService.getAccessibleDepartments(currentUser);
             return ResponseEntity.ok(departments);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    // ==================== FEEDBACK REQUESTS ====================
+    
+    @PostMapping("/feedback/requests")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYEE')")
+    public ResponseEntity<?> createFeedbackRequest(@RequestBody FeedbackRequestDto requestDto) {
+        try {
+            User currentUser = getCurrentUser();
+            FeedbackRequestDto createdRequest = performanceManagementService.createFeedbackRequest(requestDto, currentUser);
+            return ResponseEntity.ok(createdRequest);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+    
+    @PutMapping("/feedback/requests/{requestId}/status")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYEE')")
+    public ResponseEntity<?> updateFeedbackRequestStatus(
+            @PathVariable Long requestId,
+            @RequestParam String status) {
+        try {
+            User currentUser = getCurrentUser();
+            FeedbackRequestDto updatedRequest = performanceManagementService.updateFeedbackRequestStatus(requestId, status, currentUser);
+            return ResponseEntity.ok(updatedRequest);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+    
+    @GetMapping("/feedback/requests/received")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYEE')")
+    public ResponseEntity<List<FeedbackRequestDto>> getFeedbackRequestsForUser() {
+        try {
+            User currentUser = getCurrentUser();
+            List<FeedbackRequestDto> requests = performanceManagementService.getFeedbackRequestsForUser(currentUser);
+            return ResponseEntity.ok(requests);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    @GetMapping("/feedback/requests/sent")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYEE')")
+    public ResponseEntity<List<FeedbackRequestDto>> getFeedbackRequestsFromUser() {
+        try {
+            User currentUser = getCurrentUser();
+            List<FeedbackRequestDto> requests = performanceManagementService.getFeedbackRequestsFromUser(currentUser);
+            return ResponseEntity.ok(requests);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    @GetMapping("/feedback/requests/pending")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYEE')")
+    public ResponseEntity<List<FeedbackRequestDto>> getPendingFeedbackRequests() {
+        try {
+            User currentUser = getCurrentUser();
+            List<FeedbackRequestDto> requests = performanceManagementService.getPendingFeedbackRequests(currentUser);
+            return ResponseEntity.ok(requests);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).build();
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
         }

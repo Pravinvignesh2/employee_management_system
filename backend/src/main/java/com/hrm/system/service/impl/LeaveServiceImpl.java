@@ -18,8 +18,10 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
-@Service
+@Service("leaveService")
 @Transactional
 public class LeaveServiceImpl implements LeaveService {
     
@@ -58,6 +60,73 @@ public class LeaveServiceImpl implements LeaveService {
     
     @Override
     public Page<LeaveDto> getAllLeavesWithFilters(Pageable pageable, Long userId, Leave.LeaveType leaveType, Leave.LeaveStatus status, String startDate, String endDate, String query) {
+        // Get current user for role-based filtering
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User current = null;
+        if (auth != null && auth.getPrincipal() instanceof User) {
+            current = (User) auth.getPrincipal();
+        }
+
+        // Debug logging
+        System.out.println("=== DEBUG: getAllLeavesWithFilters ===");
+        System.out.println("Current user: " + (current != null ? current.getFullName() : "null"));
+        System.out.println("Current user role: " + (current != null ? current.getRole() : "null"));
+        System.out.println("Current user department: " + (current != null ? current.getDepartment() : "null"));
+        System.out.println("Filters - userId: " + userId + ", leaveType: " + leaveType + ", status: " + status + ", query: " + query);
+
+        // Manager department scoping - apply to all manager queries
+        if (current != null && current.getRole() == User.UserRole.MANAGER) {
+            User.Department managerDept = current.getDepartment();
+            System.out.println("Manager department filtering applied: " + managerDept);
+            
+            // If manager has specific filters, apply them with department scope
+            if (userId != null && leaveType != null && status != null && startDate != null && endDate != null && query != null) {
+                // All filters provided with department scope
+                LocalDate start = LocalDate.parse(startDate);
+                LocalDate end = LocalDate.parse(endDate);
+                return leaveRepository.findByUser_DepartmentAndUserIdAndLeaveTypeAndStatusAndStartDateBetweenAndReasonContainingIgnoreCase(
+                    managerDept, userId, leaveType, status, start, end, query, pageable).map(LeaveDto::new);
+            } else if (userId != null && leaveType != null && status != null) {
+                // User, type, and status filters with department scope
+                return leaveRepository.findByUser_DepartmentAndUserIdAndLeaveTypeAndStatus(managerDept, userId, leaveType, status, pageable)
+                        .map(LeaveDto::new);
+            } else if (userId != null && leaveType != null) {
+                // User and type filters with department scope
+                return leaveRepository.findByUser_DepartmentAndUserIdAndLeaveType(managerDept, userId, leaveType, pageable)
+                        .map(LeaveDto::new);
+            } else if (userId != null && status != null) {
+                // User and status filters with department scope
+                return leaveRepository.findByUser_DepartmentAndUserIdAndStatus(managerDept, userId, status, pageable)
+                        .map(LeaveDto::new);
+            } else if (leaveType != null && status != null) {
+                // Type and status filters with department scope
+                return leaveRepository.findByUser_DepartmentAndLeaveTypeAndStatus(managerDept, leaveType, status, pageable)
+                        .map(LeaveDto::new);
+            } else if (userId != null) {
+                // User filter only with department scope
+                return leaveRepository.findByUser_DepartmentAndUserId(managerDept, userId, pageable)
+                        .map(LeaveDto::new);
+            } else if (leaveType != null) {
+                // Type filter only with department scope
+                return leaveRepository.findByUser_DepartmentAndLeaveType(managerDept, leaveType, pageable)
+                        .map(LeaveDto::new);
+            } else if (status != null) {
+                // Status filter only with department scope
+                return leaveRepository.findByUser_DepartmentAndStatus(managerDept, status, pageable)
+                        .map(LeaveDto::new);
+            } else if (query != null) {
+                // Search query only with department scope
+                return leaveRepository.findByUser_DepartmentAndReasonContainingIgnoreCase(managerDept, query, pageable)
+                        .map(LeaveDto::new);
+            } else {
+                // No filters, return all leaves from manager's department
+                System.out.println("No filters provided, returning all leaves for department: " + managerDept);
+                return leaveRepository.findByUser_Department(managerDept, pageable).map(LeaveDto::new);
+            }
+        }
+
+        System.out.println("Admin or no role - applying filters without department restriction");
+        // Admin or no role - apply filters without department restriction
         if (userId != null && leaveType != null && status != null && startDate != null && endDate != null && query != null) {
             // All filters provided
             LocalDate start = LocalDate.parse(startDate);
@@ -97,7 +166,7 @@ public class LeaveServiceImpl implements LeaveService {
             return leaveRepository.findByReasonContainingIgnoreCase(query, pageable)
                     .map(LeaveDto::new);
         } else {
-            // No filters, return all
+            // No filters, return all (admin)
             return leaveRepository.findAll(pageable).map(LeaveDto::new);
         }
     }
@@ -159,43 +228,132 @@ public class LeaveServiceImpl implements LeaveService {
     }
     
     @Override
+    public List<LeaveDto> getLeavesByDepartment(String department) {
+        try {
+            User.Department dept = User.Department.valueOf(department.toUpperCase());
+            return leaveRepository.findByUser_Department(dept, org.springframework.data.domain.Pageable.unpaged())
+                    .stream()
+                    .map(LeaveDto::new)
+                    .collect(Collectors.toList());
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid department: " + department);
+        }
+    }
+    
+    @Override
+    public List<LeaveDto> getLeavesByDateRange(LocalDate startDate, LocalDate endDate) {
+        return leaveRepository.findByDateRange(startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
+                .stream()
+                .map(LeaveDto::new)
+                .collect(Collectors.toList());
+    }
+    
+    @Override
     public LeaveDto approveLeave(Long id) {
         Optional<Leave> leave = leaveRepository.findById(id);
         if (leave.isEmpty()) {
             throw new RuntimeException("Leave not found with ID: " + id);
         }
-        
         Leave existingLeave = leave.get();
-        if (existingLeave.getStatus() != Leave.LeaveStatus.PENDING) {
-            throw new RuntimeException("Only pending leaves can be approved");
+
+        // Authorization:
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof User)) {
+            throw new RuntimeException("Unauthorized: User not authenticated.");
         }
-        
+        User currentUser = (User) auth.getPrincipal();
+        User leaveRequester = existingLeave.getUser();
+
+        // Debugging
+        System.out.println("DEBUG: Approving Leave - Current User: " + currentUser.getFullName() + " (" + currentUser.getRole() + ", Dept: " + currentUser.getDepartment() + ")");
+        System.out.println("DEBUG: Approving Leave - Leave Requester: " + leaveRequester.getFullName() + " (" + leaveRequester.getRole() + ", Dept: " + leaveRequester.getDepartment() + ")");
+
+        boolean authorized = false;
+        if (leaveRequester.getRole() == User.UserRole.MANAGER) {
+            // If leave is from a Manager, only an Admin can approve
+            if (currentUser.getRole() == User.UserRole.ADMIN) {
+                authorized = true;
+            }
+        } else if (leaveRequester.getRole() == User.UserRole.ADMIN) {
+            // If leave is from an Admin, only another Admin can approve (not self)
+            if (currentUser.getRole() == User.UserRole.ADMIN && !currentUser.getId().equals(leaveRequester.getId())) {
+                authorized = true;
+            }
+        } else { // Employee role
+            // If leave is from an Employee, only Manager of same department can approve
+            if (currentUser.getRole() == User.UserRole.MANAGER && currentUser.getDepartment() == leaveRequester.getDepartment()) {
+                authorized = true;
+            }
+        }
+
+        if (!authorized) {
+            throw new SecurityException("You are not authorized to approve this leave request.");
+        }
+
+        if (existingLeave.getStatus() != Leave.LeaveStatus.PENDING) {
+            throw new RuntimeException("Leave request is not in PENDING status and cannot be approved.");
+        }
+
         existingLeave.setStatus(Leave.LeaveStatus.APPROVED);
-        existingLeave.setApprovalComments("Approved");
+        existingLeave.setApprovedBy(currentUser);
         existingLeave.setApprovedAt(LocalDateTime.now());
-        
-        Leave approvedLeave = leaveRepository.save(existingLeave);
-        return new LeaveDto(approvedLeave);
+        existingLeave.setApprovalComments("Approved");
+        Leave updatedLeave = leaveRepository.save(existingLeave);
+        return new LeaveDto(updatedLeave);
     }
-    
+
     @Override
     public LeaveDto rejectLeave(Long id, String reason) {
         Optional<Leave> leave = leaveRepository.findById(id);
         if (leave.isEmpty()) {
             throw new RuntimeException("Leave not found with ID: " + id);
         }
-        
         Leave existingLeave = leave.get();
-        if (existingLeave.getStatus() != Leave.LeaveStatus.PENDING) {
-            throw new RuntimeException("Only pending leaves can be rejected");
+
+        // Authorization:
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof User)) {
+            throw new RuntimeException("Unauthorized: User not authenticated.");
         }
-        
+        User currentUser = (User) auth.getPrincipal();
+        User leaveRequester = existingLeave.getUser();
+
+        // Debugging
+        System.out.println("DEBUG: Rejecting Leave - Current User: " + currentUser.getFullName() + " (" + currentUser.getRole() + ", Dept: " + currentUser.getDepartment() + ")");
+        System.out.println("DEBUG: Rejecting Leave - Leave Requester: " + leaveRequester.getFullName() + " (" + leaveRequester.getRole() + ", Dept: " + leaveRequester.getDepartment() + ")");
+
+        boolean authorized = false;
+        if (leaveRequester.getRole() == User.UserRole.MANAGER) {
+            // If leave is from a Manager, only an Admin can reject
+            if (currentUser.getRole() == User.UserRole.ADMIN) {
+                authorized = true;
+            }
+        } else if (leaveRequester.getRole() == User.UserRole.ADMIN) {
+            // If leave is from an Admin, only another Admin can reject (not self)
+            if (currentUser.getRole() == User.UserRole.ADMIN && !currentUser.getId().equals(leaveRequester.getId())) {
+                authorized = true;
+            }
+        } else { // Employee role
+            // If leave is from an Employee, only Manager of same department can reject
+            if (currentUser.getRole() == User.UserRole.MANAGER && currentUser.getDepartment() == leaveRequester.getDepartment()) {
+                authorized = true;
+            }
+        }
+
+        if (!authorized) {
+            throw new SecurityException("You are not authorized to reject this leave request.");
+        }
+
+        if (existingLeave.getStatus() != Leave.LeaveStatus.PENDING) {
+            throw new RuntimeException("Leave request is not in PENDING status and cannot be rejected.");
+        }
+
         existingLeave.setStatus(Leave.LeaveStatus.REJECTED);
-        existingLeave.setApprovalComments(reason);
+        existingLeave.setApprovedBy(currentUser);
         existingLeave.setApprovedAt(LocalDateTime.now());
-        
-        Leave rejectedLeave = leaveRepository.save(existingLeave);
-        return new LeaveDto(rejectedLeave);
+        existingLeave.setApprovalComments(reason);
+        Leave updatedLeave = leaveRepository.save(existingLeave);
+        return new LeaveDto(updatedLeave);
     }
     
     @Override

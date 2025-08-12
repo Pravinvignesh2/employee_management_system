@@ -134,6 +134,11 @@ export class UserService {
     return this.http.get<number>(`${this.apiUrl}/count/role/${role}`);
   }
 
+  // Get reviews by employee
+  getReviewsByEmployee(employeeId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${environment.apiUrl}/reviews/employee/${employeeId}`);
+  }
+
   // Helper method to get user's full name
   getFullName(user: User): string {
     return `${user.firstName} ${user.lastName}`;

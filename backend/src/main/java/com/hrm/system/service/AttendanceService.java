@@ -127,6 +127,16 @@ public interface AttendanceService {
     long getTotalWorkingHours(Long userId, LocalDate startDate, LocalDate endDate);
     
     /**
+     * Automatically calculate and update attendance status based on working hours
+     */
+    void updateAttendanceStatusBasedOnWorkingHours(Long userId, LocalDate date);
+    
+    /**
+     * Update all attendance records for a specific date based on working hours
+     */
+    void updateAllAttendanceStatusForDate(LocalDate date);
+    
+    /**
      * Attendance statistics for dashboard
      */
     class AttendanceStatistics {

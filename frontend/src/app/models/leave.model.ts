@@ -5,6 +5,8 @@ export interface Leave {
   userId: number;
   employeeName?: string;
   employeeId?: string;
+  department?: string; // Add department field
+  userRole?: string; // Add user role field
   leaveType: LeaveType;
   startDate: string;
   endDate: string;

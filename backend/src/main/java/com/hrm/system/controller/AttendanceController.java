@@ -29,10 +29,10 @@ import java.util.List;
 @Tag(name = "Attendance Management", description = "APIs for managing employee attendance")
 @CrossOrigin(origins = "*")
 public class AttendanceController {
-    
+
     @Autowired
     private AttendanceService attendanceService;
-    
+
     /**
      * Punch in for a user
      */
@@ -44,7 +44,7 @@ public class AttendanceController {
             @RequestParam(required = false) String location,
             @RequestParam(required = false) Double latitude,
             @RequestParam(required = false) Double longitude) {
-        
+
         try {
             AttendanceDto attendance = attendanceService.punchIn(userId, location, latitude, longitude);
             return ResponseEntity.ok(attendance);
@@ -52,7 +52,7 @@ public class AttendanceController {
             return ResponseEntity.badRequest().build();
         }
     }
-    
+
     /**
      * Punch out for a user
      */
@@ -64,7 +64,7 @@ public class AttendanceController {
             @RequestParam(required = false) String location,
             @RequestParam(required = false) Double latitude,
             @RequestParam(required = false) Double longitude) {
-        
+
         try {
             AttendanceDto attendance = attendanceService.punchOut(userId, location, latitude, longitude);
             return ResponseEntity.ok(attendance);
@@ -72,7 +72,7 @@ public class AttendanceController {
             return ResponseEntity.badRequest().build();
         }
     }
-    
+
     /**
      * Create attendance record
      */
@@ -87,7 +87,7 @@ public class AttendanceController {
             return ResponseEntity.badRequest().build();
         }
     }
-    
+
     /**
      * Get all attendance records with pagination and filters
      */
@@ -102,20 +102,21 @@ public class AttendanceController {
             @Parameter(description = "Filter by date (YYYY-MM-DD)") @RequestParam(required = false) String date,
             @Parameter(description = "Filter by status") @RequestParam(required = false) Attendance.AttendanceStatus status,
             @Parameter(description = "Filter by user ID") @RequestParam(required = false) Long userId) {
-        
+
         Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
-        
+
         // Apply filters
         if (date != null || status != null || userId != null) {
-            Page<AttendanceDto> attendance = attendanceService.getAllAttendanceWithFilters(pageable, date, status, userId);
+            Page<AttendanceDto> attendance = attendanceService.getAllAttendanceWithFilters(pageable, date, status,
+                    userId);
             return ResponseEntity.ok(attendance);
         } else {
             Page<AttendanceDto> attendance = attendanceService.getAllAttendance(pageable);
             return ResponseEntity.ok(attendance);
         }
     }
-    
+
     /**
      * Get attendance by ID
      */
@@ -127,7 +128,7 @@ public class AttendanceController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
-    
+
     /**
      * Get attendance by user and date
      */
@@ -137,12 +138,12 @@ public class AttendanceController {
     public ResponseEntity<AttendanceDto> getAttendanceByUserAndDate(
             @PathVariable Long userId,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        
+
         return attendanceService.getAttendanceByUserAndDate(userId, date)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
-    
+
     /**
      * Get attendance by user
      */
@@ -153,7 +154,7 @@ public class AttendanceController {
         List<AttendanceDto> attendance = attendanceService.getAttendanceByUser(userId);
         return ResponseEntity.ok(attendance);
     }
-    
+
     /**
      * Get attendance by date
      */
@@ -162,11 +163,11 @@ public class AttendanceController {
     @Operation(summary = "Get attendance by date", description = "Get all attendance records for a specific date")
     public ResponseEntity<List<AttendanceDto>> getAttendanceByDate(
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        
+
         List<AttendanceDto> attendance = attendanceService.getAttendanceByDate(date);
         return ResponseEntity.ok(attendance);
     }
-    
+
     /**
      * Get attendance by user and date range
      */
@@ -177,11 +178,11 @@ public class AttendanceController {
             @PathVariable Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        
+
         List<AttendanceDto> attendance = attendanceService.getAttendanceByUserAndDateRange(userId, startDate, endDate);
         return ResponseEntity.ok(attendance);
     }
-    
+
     /**
      * Get attendance by department and date
      */
@@ -191,11 +192,11 @@ public class AttendanceController {
     public ResponseEntity<List<AttendanceDto>> getAttendanceByDepartmentAndDate(
             @PathVariable String department,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        
+
         List<AttendanceDto> attendance = attendanceService.getAttendanceByDepartmentAndDate(department, date);
         return ResponseEntity.ok(attendance);
     }
-    
+
     /**
      * Get attendance by status
      */
@@ -206,14 +207,15 @@ public class AttendanceController {
         List<AttendanceDto> attendance = attendanceService.getAttendanceByStatus(status);
         return ResponseEntity.ok(attendance);
     }
-    
+
     /**
      * Update attendance record
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @Operation(summary = "Update attendance", description = "Update an attendance record")
-    public ResponseEntity<AttendanceDto> updateAttendance(@PathVariable Long id, @Valid @RequestBody AttendanceDto attendanceDto) {
+    public ResponseEntity<AttendanceDto> updateAttendance(@PathVariable Long id,
+            @Valid @RequestBody AttendanceDto attendanceDto) {
         try {
             AttendanceDto updatedAttendance = attendanceService.updateAttendance(id, attendanceDto);
             return ResponseEntity.ok(updatedAttendance);
@@ -221,7 +223,7 @@ public class AttendanceController {
             return ResponseEntity.notFound().build();
         }
     }
-    
+
     /**
      * Delete attendance record
      */
@@ -236,7 +238,7 @@ public class AttendanceController {
             return ResponseEntity.notFound().build();
         }
     }
-    
+
     /**
      * Mark attendance as absent
      */
@@ -247,7 +249,7 @@ public class AttendanceController {
             @PathVariable Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam String reason) {
-        
+
         try {
             AttendanceDto attendance = attendanceService.markAbsent(userId, date, reason);
             return ResponseEntity.ok(attendance);
@@ -255,7 +257,7 @@ public class AttendanceController {
             return ResponseEntity.badRequest().build();
         }
     }
-    
+
     /**
      * Mark attendance as half day
      */
@@ -266,7 +268,7 @@ public class AttendanceController {
             @PathVariable Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam String reason) {
-        
+
         try {
             AttendanceDto attendance = attendanceService.markHalfDay(userId, date, reason);
             return ResponseEntity.ok(attendance);
@@ -274,7 +276,7 @@ public class AttendanceController {
             return ResponseEntity.badRequest().build();
         }
     }
-    
+
     /**
      * Get attendance statistics
      */
@@ -285,29 +287,32 @@ public class AttendanceController {
         AttendanceService.AttendanceStatistics statistics = attendanceService.getAttendanceStatistics();
         return ResponseEntity.ok(statistics);
     }
-    
+
     /**
      * Get user attendance statistics
      */
     @GetMapping("/statistics/user/{userId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER') or #userId == authentication.principal.id")
     @Operation(summary = "Get user attendance statistics", description = "Get attendance statistics for a specific user")
-    public ResponseEntity<AttendanceService.UserAttendanceStatistics> getUserAttendanceStatistics(@PathVariable Long userId) {
+    public ResponseEntity<AttendanceService.UserAttendanceStatistics> getUserAttendanceStatistics(
+            @PathVariable Long userId) {
         AttendanceService.UserAttendanceStatistics statistics = attendanceService.getUserAttendanceStatistics(userId);
         return ResponseEntity.ok(statistics);
     }
-    
+
     /**
      * Get department attendance statistics
      */
     @GetMapping("/statistics/department/{department}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @Operation(summary = "Get department attendance statistics", description = "Get attendance statistics for a specific department")
-    public ResponseEntity<AttendanceService.DepartmentAttendanceStatistics> getDepartmentAttendanceStatistics(@PathVariable String department) {
-        AttendanceService.DepartmentAttendanceStatistics statistics = attendanceService.getDepartmentAttendanceStatistics(department);
+    public ResponseEntity<AttendanceService.DepartmentAttendanceStatistics> getDepartmentAttendanceStatistics(
+            @PathVariable String department) {
+        AttendanceService.DepartmentAttendanceStatistics statistics = attendanceService
+                .getDepartmentAttendanceStatistics(department);
         return ResponseEntity.ok(statistics);
     }
-    
+
     /**
      * Check if user has punched in for the day
      */
@@ -317,11 +322,11 @@ public class AttendanceController {
     public ResponseEntity<Boolean> hasPunchedIn(
             @PathVariable Long userId,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        
+
         boolean hasPunchedIn = attendanceService.hasPunchedIn(userId, date);
         return ResponseEntity.ok(hasPunchedIn);
     }
-    
+
     /**
      * Check if user has punched out for the day
      */
@@ -331,11 +336,11 @@ public class AttendanceController {
     public ResponseEntity<Boolean> hasPunchedOut(
             @PathVariable Long userId,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        
+
         boolean hasPunchedOut = attendanceService.hasPunchedOut(userId, date);
         return ResponseEntity.ok(hasPunchedOut);
     }
-    
+
     /**
      * Get working hours for a user on a specific date
      */
@@ -345,11 +350,11 @@ public class AttendanceController {
     public ResponseEntity<Long> getWorkingHours(
             @PathVariable Long userId,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        
+
         long workingHours = attendanceService.getWorkingHours(userId, date);
         return ResponseEntity.ok(workingHours);
     }
-    
+
     /**
      * Get total working hours for a user in a date range
      */
@@ -360,8 +365,28 @@ public class AttendanceController {
             @PathVariable Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        
-        long totalWorkingHours = attendanceService.getTotalWorkingHours(userId, startDate, endDate);
-        return ResponseEntity.ok(totalWorkingHours);
+
+        try {
+            long totalHours = attendanceService.getTotalWorkingHours(userId, startDate, endDate);
+            return ResponseEntity.ok(totalHours);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
-} 
+
+    /**
+     * Update attendance status for a specific date based on working hours
+     */
+    @PostMapping("/update-status-for-date/{date}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @Operation(summary = "Update attendance status for date", description = "Update all attendance records for a specific date based on working hours")
+    public ResponseEntity<String> updateAttendanceStatusForDate(
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        try {
+            attendanceService.updateAllAttendanceStatusForDate(date);
+            return ResponseEntity.ok("Attendance status updated successfully for " + date);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body("Failed to update attendance status: " + e.getMessage());
+        }
+    }
+}

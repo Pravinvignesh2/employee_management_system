@@ -19,7 +19,8 @@ export const environment = {
     fileUpload: true,
     export: true,
     import: true,
-    realTimeUpdates: false
+    realTimeUpdates: false,
+    anonymousFeedback: true
   },
   auth: {
     tokenKey: 'hrms_token',

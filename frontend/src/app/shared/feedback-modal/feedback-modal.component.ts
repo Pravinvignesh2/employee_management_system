@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, Output, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Feedback } from '../../services/performance-management.service';
 
@@ -13,8 +13,8 @@ import { Feedback } from '../../services/performance-management.service';
         </div>
         
         <form [formGroup]="feedbackForm" (ngSubmit)="onSubmit()" class="modal-body">
-          <div class="form-group" *ngIf="isRequesting">
-            <label for="recipient">Request Feedback From *</label>
+          <div class="form-group" *ngIf="isRequesting || allowDirectRecipient">
+            <label for="recipient">{{ isRequesting ? 'Request Feedback From *' : 'Feedback To *' }}</label>
             <select id="recipient" formControlName="recipientId" class="form-control">
               <option value="">Select recipient</option>
               <option *ngFor="let user of availableUsers" [value]="user.id">
@@ -23,6 +23,14 @@ import { Feedback } from '../../services/performance-management.service';
             </select>
             <div class="error-message" *ngIf="feedbackForm.get('recipientId')?.invalid && feedbackForm.get('recipientId')?.touched">
               Please select a recipient
+            </div>
+            <div class="help-text" *ngIf="allowDirectRecipient">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                <path d="M12 16v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M12 8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span>Only users in your department are shown</span>
             </div>
           </div>
           
@@ -40,7 +48,7 @@ import { Feedback } from '../../services/performance-management.service';
             </div>
           </div>
           
-          <div class="form-group">
+          <div class="form-group" *ngIf="!isRequesting">
             <label for="rating">Rating *</label>
             <div class="rating-input">
               <span 
@@ -55,7 +63,7 @@ import { Feedback } from '../../services/performance-management.service';
             </div>
           </div>
           
-          <div class="form-group">
+          <div class="form-group" *ngIf="!isRequesting">
             <label for="comment">Comments *</label>
             <textarea 
               id="comment" 
@@ -73,15 +81,11 @@ import { Feedback } from '../../services/performance-management.service';
             <label for="reviewPeriod">Review Period</label>
             <select id="reviewPeriod" formControlName="reviewPeriod" class="form-control">
               <option value="">Select period</option>
-              <option value="Q1 2024">Q1 2024</option>
-              <option value="Q2 2024">Q2 2024</option>
-              <option value="Q3 2024">Q3 2024</option>
-              <option value="Q4 2024">Q4 2024</option>
-              <option value="Annual 2024">Annual 2024</option>
+              <option *ngFor="let period of getReviewPeriods()" [value]="period">{{ period }}</option>
             </select>
           </div>
           
-          <div class="form-group">
+          <div class="form-group" *ngIf="showAnonymousOption && !isRequesting">
             <label class="checkbox-label">
               <input type="checkbox" formControlName="isAnonymous">
               Submit anonymously
@@ -272,6 +276,20 @@ import { Feedback } from '../../services/performance-management.service';
       background: #e5e7eb;
     }
     
+    .help-text {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    
+    .help-text svg {
+      color: #9ca3af;
+      flex-shrink: 0;
+    }
+    
     @media (max-width: 640px) {
       .modal-content {
         width: 95%;
@@ -280,9 +298,16 @@ import { Feedback } from '../../services/performance-management.service';
     }
   `]
 })
-export class FeedbackModalComponent implements OnInit {
+export class FeedbackModalComponent implements OnInit, OnChanges {
   @Input() isRequesting = false;
   @Input() availableUsers: any[] = [];
+  @Input() showAnonymousOption = true;
+  @Input() allowDirectRecipient = false;
+  // New: preset values for request-driven feedback
+  @Input() presetRecipientId?: number;
+  @Input() presetType?: 'SELF' | 'PEER' | 'MANAGER' | 'SUBORDINATE';
+  @Input() presetReviewPeriod?: string;
+  @Input() lockRecipientAndType = false;
   @Output() save = new EventEmitter<Feedback>();
   @Output() closeModal = new EventEmitter<void>();
   
@@ -301,9 +326,50 @@ export class FeedbackModalComponent implements OnInit {
   }
   
   ngOnInit() {
-    if (!this.isRequesting) {
+    if (!(this.isRequesting || this.allowDirectRecipient)) {
       this.feedbackForm.get('recipientId')?.clearValidators();
       this.feedbackForm.get('recipientId')?.updateValueAndValidity();
+    }
+    // When requesting feedback, rating/comment/anonymous are not required
+    if (this.isRequesting) {
+      this.feedbackForm.get('rating')?.clearValidators();
+      this.feedbackForm.get('rating')?.updateValueAndValidity();
+      this.feedbackForm.get('comment')?.clearValidators();
+      this.feedbackForm.get('comment')?.updateValueAndValidity();
+      this.feedbackForm.patchValue({ isAnonymous: false });
+    }
+
+    // Apply preset values if provided (for responding to a request)
+    const patch: any = {};
+    if (this.presetRecipientId != null) patch.recipientId = this.presetRecipientId;
+    if (this.presetType) patch.type = this.presetType;
+    if (this.presetReviewPeriod) patch.reviewPeriod = this.presetReviewPeriod;
+    if (Object.keys(patch).length) {
+      this.feedbackForm.patchValue(patch);
+    }
+
+    if (this.lockRecipientAndType) {
+      this.feedbackForm.get('recipientId')?.disable();
+      this.feedbackForm.get('type')?.disable();
+    }
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    // Re-apply presets on any input change (component is recreated by *ngIf, but handle safety)
+    const patch: any = {};
+    if (this.presetRecipientId != null) patch.recipientId = this.presetRecipientId;
+    if (this.presetType) patch.type = this.presetType;
+    if (this.presetReviewPeriod) patch.reviewPeriod = this.presetReviewPeriod;
+    if (Object.keys(patch).length) {
+      // Use getRawValue to allow disabled controls to be patched
+      this.feedbackForm.patchValue(patch, { emitEvent: false });
+    }
+    if (this.lockRecipientAndType) {
+      this.feedbackForm.get('recipientId')?.disable({ emitEvent: false });
+      this.feedbackForm.get('type')?.disable({ emitEvent: false });
+    } else {
+      this.feedbackForm.get('recipientId')?.enable({ emitEvent: false });
+      this.feedbackForm.get('type')?.enable({ emitEvent: false });
     }
   }
   
@@ -314,16 +380,25 @@ export class FeedbackModalComponent implements OnInit {
   onSubmit() {
     if (this.feedbackForm.valid) {
       this.isSubmitting = true;
-      const formValue = this.feedbackForm.value;
+      const formValue = this.feedbackForm.getRawValue();
       
-      const feedbackData: Feedback = {
-        recipientId: formValue.recipientId,
-        type: formValue.type,
-        rating: formValue.rating,
-        comment: formValue.comment,
-        reviewPeriod: formValue.reviewPeriod,
-        isAnonymous: formValue.isAnonymous
-      };
+      const feedbackData: Feedback = this.isRequesting
+        ? {
+            recipientId: formValue.recipientId,
+            type: formValue.type,
+            rating: 0,
+            comment: '',
+            reviewPeriod: formValue.reviewPeriod,
+            isAnonymous: false
+          }
+        : {
+            recipientId: formValue.recipientId,
+            type: formValue.type,
+            rating: formValue.rating,
+            comment: formValue.comment,
+            reviewPeriod: formValue.reviewPeriod,
+            isAnonymous: formValue.isAnonymous
+          };
       
       this.save.emit(feedbackData);
     }
@@ -331,5 +406,25 @@ export class FeedbackModalComponent implements OnInit {
   
   close() {
     this.closeModal.emit();
+  }
+
+  getReviewPeriods(): string[] {
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1; // getMonth() is 0-indexed
+
+    const periods: string[] = [];
+
+    // Add current quarter
+    const quarter = Math.floor(currentMonth / 3) + 1;
+    periods.push(`Q${quarter} ${currentYear}`);
+
+    // Add next quarter
+    const nextQuarter = (Math.floor(currentMonth / 3) + 2) % 4;
+    periods.push(`Q${nextQuarter} ${currentYear}`);
+
+    // Add annual
+    periods.push(`Annual ${currentYear}`);
+
+    return periods;
   }
 } 

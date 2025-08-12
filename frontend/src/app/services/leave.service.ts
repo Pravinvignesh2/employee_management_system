@@ -84,6 +84,11 @@ export class LeaveService {
     return this.http.get<Leave[]>(`${this.apiUrl}/type/${leaveType}`);
   }
 
+  // Get leaves by department
+  getLeavesByDepartment(department: string): Observable<Leave[]> {
+    return this.http.get<Leave[]>(`${this.apiUrl}/department/${department}`);
+  }
+
   // Approval Operations
   approveLeave(id: number, approval: LeaveApproval): Observable<Leave> {
     return this.http.patch<Leave>(`${this.apiUrl}/${id}/approve`, approval);
@@ -121,13 +126,11 @@ export class LeaveService {
 
   // Helper Methods
   getCurrentUserLeaves(): Observable<Leave[]> {
-    const currentUserId = this.getCurrentUserId();
-    return this.getLeavesByUser(currentUserId);
+    return this.http.get<Leave[]>(`${this.apiUrl}/current-user`);
   }
 
   getCurrentUserLeaveStatistics(): Observable<UserLeaveStatistics> {
-    const currentUserId = this.getCurrentUserId();
-    return this.getUserLeaveStatistics(currentUserId);
+    return this.http.get<UserLeaveStatistics>(`${this.apiUrl}/statistics/current-user`);
   }
 
   createLeaveForCurrentUser(leaveRequest: Omit<LeaveRequest, 'userId'>): Observable<Leave> {

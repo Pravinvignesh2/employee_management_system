@@ -37,6 +37,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatGridListModule } from '@angular/material/grid-list';
+import { NgChartsModule } from 'ng2-charts';
 
 // Components
 import { AppComponent } from './app.component';
@@ -73,6 +74,7 @@ import { ThemeToggleComponent } from './shared/theme-toggle.component';
 import { ChatbotComponent } from './shared/chatbot/chatbot.component';
 import { GoalModalComponent } from './shared/goal-modal/goal-modal.component';
 import { FeedbackModalComponent } from './shared/feedback-modal/feedback-modal.component';
+import { ReviewModalComponent } from './shared/review-modal/review-modal.component';
 
 // Guards
 import { AuthGuard } from './guards/auth.guard';
@@ -91,6 +93,7 @@ import { PayrollService } from './services/payroll.service';
 import { PerformanceService } from './services/performance.service';
 import { PerformanceManagementService } from './services/performance-management.service';
 import { ThemeService } from './services/theme.service';
+import { ReviewService } from './services/review.service';
 
 // Routes
 import { AppRoutingModule } from './app-routing.module';
@@ -128,7 +131,8 @@ import { AppRoutingModule } from './app-routing.module';
     DocumentUploadModalComponent,
     ChatbotComponent,
     GoalModalComponent,
-    FeedbackModalComponent
+    FeedbackModalComponent,
+    ReviewModalComponent
   ],
   imports: [
     BrowserModule,
@@ -171,6 +175,7 @@ import { AppRoutingModule } from './app-routing.module';
     MatTooltipModule,
     MatDividerModule,
     MatGridListModule
+    ,NgChartsModule
   ],
   providers: [
     AuthService,
@@ -181,6 +186,7 @@ import { AppRoutingModule } from './app-routing.module';
     PerformanceService,
     PerformanceManagementService,
     ThemeService,
+    ReviewService,
     AuthGuard,
     RoleGuard,
     {

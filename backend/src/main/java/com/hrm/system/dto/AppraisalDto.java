@@ -1,15 +1,25 @@
 package com.hrm.system.dto;
 
 import com.hrm.system.entity.Appraisal;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
 import java.time.LocalDateTime;
 
 public class AppraisalDto {
     private Long id;
+    @NotNull(message = "Employee ID is required")
     private Long employeeId;
     private String employeeName;
+    @NotNull(message = "Manager ID is required")
     private Long managerId;
     private String managerName;
+    @NotBlank(message = "Period is required")
     private String period;
+    @NotNull(message = "Rating is required")
+    @Min(value = 1, message = "Rating must be at least 1")
+    @Max(value = 5, message = "Rating must be at most 5")
     private Double rating;
     private String achievements;
     private String improvements;

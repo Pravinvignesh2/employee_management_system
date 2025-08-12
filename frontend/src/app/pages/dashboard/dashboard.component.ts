@@ -354,7 +354,7 @@ import { LeaveStatistics } from '../../models/leave.model';
             </div>
             <div class="stat-content">
               <div class="quick-actions">
-                <button class="action-btn primary" (click)="navigateToEmployees()">
+                <button *ngIf="isAdmin" class="action-btn primary" (click)="navigateToEmployees()">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -377,7 +377,7 @@ import { LeaveStatistics } from '../../models/leave.model';
                   </svg>
                   Mark Attendance
                 </button>
-                <button class="action-btn neutral" (click)="navigateToReports()">
+                <!-- <button class="action-btn neutral" (click)="navigateToReports()">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -386,7 +386,7 @@ import { LeaveStatistics } from '../../models/leave.model';
                     <polyline points="10,9 9,9 8,9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                   View Reports
-                </button>
+                </button> -->
               </div>
             </div>
           </div>
@@ -1020,9 +1020,14 @@ export class DashboardComponent implements OnInit {
   leaveStatistics: LeaveStatistics | null = null;
   currentUser: any = null;
   isAdminOrManager = false;
+  isAdmin = false; // Add isAdmin property
   loading = true;
   error = '';
   recentActivities: DashboardActivity[] = [];
+  todayAttendance: any = null; // Added for today's attendance
+  userAttendanceStats: any = null; // Added for user's attendance statistics
+  userLeaves: any[] = []; // Added for user's leave records
+  leaveBalance: { [key: string]: number } = {}; // Added for calculated leave balance
   
   constructor(
     private userService: UserService,
@@ -1036,53 +1041,56 @@ export class DashboardComponent implements OnInit {
   ngOnInit(): void {
     this.loadCurrentUser();
     this.loadDashboardData();
+    this.loadAttendanceData(); // Add this line to load attendance data
   }
 
   loadCurrentUser(): void {
     this.currentUser = this.authService.getCurrentUser();
     this.isAdminOrManager = this.authService.hasAnyRole(['ADMIN', 'MANAGER']);
+    this.isAdmin = this.authService.hasRole('ADMIN'); // Set isAdmin based on role
   }
-  
+
   loadDashboardData(): void {
     this.loading = true;
-    this.error = '';
     
-    // Only load statistics for admin/manager
+    // Load dashboard statistics for admin/manager
     if (this.isAdminOrManager) {
-      // Load user statistics
-      this.userService.getUserStatistics().subscribe({
+      this.dashboardService.getDashboardStatistics().subscribe({
         next: (stats) => {
-          this.userStatistics = stats;
+          // Map the dashboard statistics to our component properties
+          this.userStatistics = {
+            totalUsers: stats.totalUsers || 0,
+            activeUsers: stats.activeUsers || 0,
+            newHiresThisMonth: stats.newHiresThisMonth || 0,
+            pendingApprovals: stats.pendingApprovals || 0
+          };
+          
+          this.attendanceStatistics = {
+            totalPresent: stats.presentToday || 0,
+            totalAbsent: stats.absentToday || 0,
+            totalHalfDay: stats.halfDayToday || 0,
+            totalLeave: 0, // Not provided by dashboard service
+            attendanceRate: stats.attendanceRate || 0
+          };
+          
+          this.leaveStatistics = {
+            totalLeaves: stats.totalLeaves || 0,
+            pendingLeaves: stats.pendingLeaves || 0,
+            approvedLeaves: stats.approvedLeaves || 0,
+            rejectedLeaves: 0, // Not provided by dashboard service
+            cancelledLeaves: 0, // Not provided by dashboard service
+            approvalRate: 0 // Will be calculated
+          };
+          
+          this.loading = false;
         },
         error: (error) => {
-          console.error('Error loading user statistics:', error);
-          this.error = 'Failed to load user statistics';
-        }
-      });
-      
-      // Load attendance statistics
-      this.attendanceService.getAttendanceStatistics().subscribe({
-        next: (stats) => {
-          this.attendanceStatistics = stats;
-        },
-        error: (error) => {
-          console.error('Error loading attendance statistics:', error);
-          this.error = 'Failed to load attendance statistics';
-        }
-      });
-      
-      // Load leave statistics
-      this.leaveService.getLeaveStatistics().subscribe({
-        next: (stats) => {
-          this.leaveStatistics = stats;
-        },
-        error: (error) => {
-          console.error('Error loading leave statistics:', error);
-          this.error = 'Failed to load leave statistics';
+          console.error('Error loading dashboard statistics:', error);
+          this.loading = false;
         }
       });
 
-      // Load recent activities
+      // Load recent activities for admins/managers
       this.loadRecentActivities();
     } else {
       // For regular employees, just set loading to false
@@ -1090,7 +1098,102 @@ export class DashboardComponent implements OnInit {
     }
   }
 
+  // Add new method to load attendance data
+  loadAttendanceData(): void {
+    if (this.currentUser) {
+      // Load today's attendance for the current user
+      this.attendanceService.getTodayAttendance().subscribe({
+        next: (attendance) => {
+          this.todayAttendance = attendance;
+        },
+        error: (error) => {
+          console.error('Error loading today\'s attendance:', error);
+        }
+      });
+
+      // Load user's attendance statistics
+      this.attendanceService.getUserAttendanceStatistics(this.currentUser.id).subscribe({
+        next: (stats: any) => {
+          this.userAttendanceStats = stats;
+        },
+        error: (error: any) => {
+          console.error('Error loading user attendance statistics:', error);
+        }
+      });
+
+      // Load user's leave records to calculate balance
+      this.leaveService.getCurrentUserLeaves().subscribe({
+        next: (leaves: any[]) => {
+          this.userLeaves = leaves;
+          this.calculateLeaveBalance();
+        },
+        error: (error: any) => {
+          console.error('Error loading user leaves:', error);
+        }
+      });
+    }
+  }
+
+  // Add method to calculate leave balance from actual leave records
+  calculateLeaveBalance(): void {
+    if (!this.userLeaves) return;
+
+    const currentYear = new Date().getFullYear();
+    const approvedLeaves = this.userLeaves.filter(leave => 
+      leave.status === 'APPROVED' && 
+      new Date(leave.startDate).getFullYear() === currentYear
+    );
+
+    // Calculate used days by leave type
+    const usedByType: { [key: string]: number } = {};
+    approvedLeaves.forEach(leave => {
+      const type = leave.leaveType;
+      const days = leave.totalDays || 1;
+      usedByType[type] = (usedByType[type] || 0) + days;
+    });
+
+    // Default leave allowances (can be made configurable)
+    const defaultAllowances = {
+      'ANNUAL': 20,
+      'SICK': 10,
+      'PERSONAL': 5,
+      'MATERNITY': 90,
+      'PATERNITY': 14,
+      'BEREAVEMENT': 5,
+      'UNPAID': 0
+    };
+
+    // Calculate remaining leaves
+    this.leaveBalance = {};
+    Object.keys(defaultAllowances).forEach(type => {
+      const used = usedByType[type] || 0;
+      const allowance = defaultAllowances[type as keyof typeof defaultAllowances];
+      this.leaveBalance[type] = Math.max(0, allowance - used);
+    });
+  }
+
+  getLeaveBalance(leaveType: string): number {
+    if (!this.leaveBalance) {
+      // Return default values if data not loaded yet
+      switch (leaveType) {
+        case 'ANNUAL': return 20;
+        case 'SICK': return 10;
+        case 'PERSONAL': return 5;
+        default: return 0;
+      }
+    }
+
+    // Use calculated balance from actual leave records
+    return this.leaveBalance[leaveType] || 0;
+  }
+
   loadRecentActivities(): void {
+    // Only load recent activities for admin/manager
+    if (!this.isAdminOrManager) {
+      this.recentActivities = [];
+      return;
+    }
+
     // Try to get activities from backend first, fallback to aggregated data
     this.dashboardService.getRecentActivities(5).subscribe({
       next: (activities) => {
@@ -1145,39 +1248,60 @@ export class DashboardComponent implements OnInit {
     return 'danger';
   }
 
-  // Employee Dashboard Methods
+  // Employee Dashboard Methods - Updated to use real data
   getTodayAttendanceStatus(): string {
     if (!this.currentUser) return 'Unknown';
     
-    // This would be fetched from attendance service
-    // For now, return a default status
-    return 'Present';
+    if (this.todayAttendance) {
+      if (this.todayAttendance.status === 'PRESENT') {
+        return 'Present';
+      } else if (this.todayAttendance.status === 'ABSENT') {
+        return 'Absent';
+      } else if (this.todayAttendance.status === 'HALF_DAY') {
+        return 'Half Day';
+      } else if (this.todayAttendance.status === 'LATE') {
+        return 'Late';
+      }
+    }
+    
+    // Check if user has punched in today
+    if (this.todayAttendance?.punchInTime && !this.todayAttendance?.punchOutTime) {
+      return 'Present';
+    }
+    
+    return 'Not Started';
   }
 
   getMonthlyAttendanceRate(): number {
-    if (!this.currentUser) return 0;
+    if (!this.currentUser || !this.userAttendanceStats) return 0;
     
-    // This would be calculated from attendance data
-    // For now, return a default rate
-    return 95;
+    return this.userAttendanceStats.monthlyAttendanceRate || 0;
   }
 
   getTodayWorkingHours(): string {
-    if (!this.currentUser) return '0h 0m';
+    if (!this.currentUser || !this.todayAttendance) return '0h 0m';
     
-    // This would be calculated from today's attendance
-    // For now, return default hours
-    return '8h 30m';
-  }
-
-  getLeaveBalance(leaveType: string): number {
-    // This would be fetched from leave service
-    switch (leaveType) {
-      case 'ANNUAL': return 15;
-      case 'SICK': return 10;
-      case 'PERSONAL': return 5;
-      default: return 0;
+    if (this.todayAttendance.workingHours !== undefined || this.todayAttendance.workingMinutes !== undefined) {
+      const hours = this.todayAttendance.workingHours || 0;
+      const minutes = this.todayAttendance.workingMinutes || 0;
+      return `${hours}h ${minutes}m`;
     }
+    
+    // Calculate from punch in/out times if available
+    if (this.todayAttendance.punchInTime && this.todayAttendance.punchOutTime) {
+      const punchIn = new Date(`2000-01-01T${this.todayAttendance.punchInTime}`);
+      const punchOut = new Date(`2000-01-01T${this.todayAttendance.punchOutTime}`);
+      const diffMs = punchOut.getTime() - punchIn.getTime();
+      const totalHours = diffMs / (1000 * 60 * 60);
+      
+      if (totalHours > 0) {
+        const hours = Math.floor(totalHours);
+        const minutes = Math.round((totalHours - hours) * 60);
+        return `${hours}h ${minutes}m`;
+      }
+    }
+    
+    return '0h 0m';
   }
 
   getUpcomingHolidays(): any[] {

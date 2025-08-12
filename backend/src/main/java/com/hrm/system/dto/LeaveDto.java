@@ -14,6 +14,8 @@ public class LeaveDto {
     
     private String employeeName;
     private String employeeId;
+    private String department; // Add department field
+    private String userRole; // Add user role field
     
     @NotNull(message = "Leave type is required")
     private Leave.LeaveType leaveType;
@@ -45,6 +47,8 @@ public class LeaveDto {
         this.userId = leave.getUser().getId();
         this.employeeName = leave.getUser().getFullName();
         this.employeeId = leave.getUser().getEmployeeId();
+        this.department = leave.getUser().getDepartment().name(); // Convert enum to string
+        this.userRole = leave.getUser().getRole().name(); // Add user role
         this.leaveType = leave.getLeaveType();
         this.startDate = leave.getStartDate();
         this.endDate = leave.getEndDate();
@@ -54,7 +58,16 @@ public class LeaveDto {
         this.approvedBy = leave.getApprovedBy() != null ? leave.getApprovedBy().getId() : null;
         this.approvedByName = leave.getApprovedBy() != null ? leave.getApprovedBy().getFullName() : null;
         this.approvedAt = leave.getApprovedAt();
-        this.rejectionReason = leave.getApprovalComments();
+        
+        // Set rejection reason only for rejected leaves, approval comments for approved leaves
+        if (leave.getStatus() == Leave.LeaveStatus.REJECTED) {
+            this.rejectionReason = leave.getApprovalComments();
+        } else if (leave.getStatus() == Leave.LeaveStatus.APPROVED && leave.getApprovalComments() != null) {
+            this.rejectionReason = leave.getApprovalComments(); // This will be displayed as "Approval Comments" in frontend
+        } else {
+            this.rejectionReason = null;
+        }
+        
         this.createdAt = leave.getCreatedAt();
         this.updatedAt = leave.getUpdatedAt();
     }
@@ -90,6 +103,22 @@ public class LeaveDto {
     
     public void setEmployeeId(String employeeId) {
         this.employeeId = employeeId;
+    }
+    
+    public String getDepartment() {
+        return department;
+    }
+    
+    public void setDepartment(String department) {
+        this.department = department;
+    }
+    
+    public String getUserRole() {
+        return userRole;
+    }
+    
+    public void setUserRole(String userRole) {
+        this.userRole = userRole;
     }
     
     public Leave.LeaveType getLeaveType() {

@@ -27,7 +27,12 @@ export class ErrorInterceptor implements HttpInterceptor {
               errorMessage = 'Unauthorized access. Please login again.';
               break;
             case 403:
-              errorMessage = 'Access denied. You do not have permission to perform this action.';
+              // Check if it's a department mismatch error
+              if (error.error && typeof error.error === 'string' && error.error.includes('department')) {
+                errorMessage = error.error;
+              } else {
+                errorMessage = 'Access denied. You do not have permission to perform this action.';
+              }
               break;
             case 404:
               errorMessage = 'The requested resource was not found.';

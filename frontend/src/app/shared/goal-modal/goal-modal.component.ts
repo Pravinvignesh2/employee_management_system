@@ -13,6 +13,24 @@ import { PerformanceGoal } from '../../services/performance-management.service';
         </div>
         
         <form [formGroup]="goalForm" (ngSubmit)="onSubmit()" class="modal-body">
+          <div class="form-group" *ngIf="canAssign">
+            <label for="userId">Assign To *</label>
+            <select id="userId" formControlName="userId" class="form-control">
+              <option value="">Select user</option>
+              <option *ngFor="let user of availableUsers" [value]="user.id">{{ user.fullName }} ({{ user.role }})</option>
+            </select>
+            <div class="error-message" *ngIf="goalForm.get('userId')?.invalid && goalForm.get('userId')?.touched">
+              Please select a user
+            </div>
+            <div class="help-text" *ngIf="canAssign">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                <path d="M12 16v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M12 8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span>Only users in your department are shown</span>
+            </div>
+          </div>
           <div class="form-group">
             <label for="title">Goal Title *</label>
             <input 
@@ -246,6 +264,20 @@ import { PerformanceGoal } from '../../services/performance-management.service';
       background: #e5e7eb;
     }
     
+    .help-text {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    
+    .help-text svg {
+      color: #9ca3af;
+      flex-shrink: 0;
+    }
+    
     @media (max-width: 640px) {
       .form-row {
         grid-template-columns: 1fr;
@@ -260,6 +292,9 @@ import { PerformanceGoal } from '../../services/performance-management.service';
 })
 export class GoalModalComponent implements OnInit {
   @Input() goal?: PerformanceGoal;
+  @Input() canAssign = false;
+  @Input() availableUsers: any[] = [];
+  @Input() defaultUserId: number | null = null;
   @Output() save = new EventEmitter<PerformanceGoal>();
   @Output() closeModal = new EventEmitter<void>();
   
@@ -269,6 +304,7 @@ export class GoalModalComponent implements OnInit {
   
   constructor(private fb: FormBuilder) {
     this.goalForm = this.fb.group({
+      userId: ['', []],
       title: ['', Validators.required],
       description: ['', Validators.required],
       target: ['100', Validators.required],
@@ -279,9 +315,16 @@ export class GoalModalComponent implements OnInit {
   }
   
   ngOnInit() {
+    if (this.canAssign) {
+      this.goalForm.get('userId')?.addValidators([Validators.required]);
+    }
+    if (!this.canAssign && this.defaultUserId) {
+      this.goalForm.patchValue({ userId: this.defaultUserId });
+    }
     if (this.goal) {
       this.isEditing = true;
       this.goalForm.patchValue({
+        userId: this.goal.userId ?? this.defaultUserId ?? '',
         title: this.goal.title,
         description: this.goal.description,
         target: this.goal.target,
@@ -298,7 +341,7 @@ export class GoalModalComponent implements OnInit {
       const formValue = this.goalForm.value;
       
       const goalData: PerformanceGoal = {
-        userId: this.goal?.userId || 0,
+        userId: this.canAssign ? Number(formValue.userId) : (this.goal?.userId || this.defaultUserId || 0),
         title: formValue.title,
         description: formValue.description,
         target: formValue.target,

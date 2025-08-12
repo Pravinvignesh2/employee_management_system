@@ -5,6 +5,7 @@ import com.hrm.system.entity.Leave;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -57,6 +58,10 @@ public interface LeaveService {
      * Get leaves by leave type
      */
     List<LeaveDto> getLeavesByType(Leave.LeaveType leaveType);
+    
+    List<LeaveDto> getLeavesByDepartment(String department);
+    
+    List<LeaveDto> getLeavesByDateRange(LocalDate startDate, LocalDate endDate);
     
     /**
      * Approve leave request

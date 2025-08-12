@@ -50,7 +50,7 @@ public class UserController {
      * Get all users with pagination
      */
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYEE')")
     @Operation(summary = "Get all users", description = "Get paginated list of all users")
     public ResponseEntity<Page<UserDto>> getAllUsers(
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,

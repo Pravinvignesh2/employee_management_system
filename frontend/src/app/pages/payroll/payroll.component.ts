@@ -14,14 +14,6 @@ import { AuthService } from '../../services/auth.service';
             <p>Manage salary, benefits, and compensation</p>
           </div>
           <div class="header-actions">
-            <div class="period-selector">
-              <label for="payrollPeriod">Payroll Period:</label>
-              <select id="payrollPeriod" [(ngModel)]="selectedPeriod" (change)="onPeriodChange()" class="period-select">
-                <option value="current">Current Month</option>
-                <option value="previous">Previous Month</option>
-                <option value="ytd">Year to Date</option>
-              </select>
-            </div>
             <button class="btn-primary" (click)="generatePayroll()" [disabled]="isGenerating">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -106,14 +98,6 @@ import { AuthService } from '../../services/auth.service';
             <div class="breakdown-card">
               <div class="card-header">
                 <h3>Salary Breakdown</h3>
-                <button class="btn-secondary" (click)="downloadPayslip()">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  Download Payslip
-                </button>
               </div>
               <div class="breakdown-list">
                 <div class="breakdown-item">
@@ -208,7 +192,7 @@ import { AuthService } from '../../services/auth.service';
           <div class="section-header">
             <h3>Payroll History</h3>
             <div class="history-filters">
-              <input type="month" [(ngModel)]="historyMonth" (change)="loadPayrollHistory()" class="month-picker">
+              <input type="month" [(ngModel)]="historyMonth" (change)="onHistoryMonthChange()" class="month-picker">
             </div>
           </div>
           <div class="history-table">
@@ -224,7 +208,7 @@ import { AuthService } from '../../services/auth.service';
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let record of payrollHistory">
+                <tr *ngFor="let record of filteredPayrollHistory">
                   <td>{{ record.period }}</td>
                   <td>{{ record.grossSalary | currency:'INR':'symbol':'1.0-0' }}</td>
                   <td>{{ record.deductions | currency:'INR':'symbol':'1.0-0' }}</td>
@@ -254,6 +238,19 @@ import { AuthService } from '../../services/auth.service';
                 </tr>
               </tbody>
             </table>
+            
+            <!-- No records message -->
+            <div *ngIf="filteredPayrollHistory.length === 0" class="no-records">
+              <div class="no-records-content">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <h3>No Payroll Records Found</h3>
+                <p>No payroll records found for the selected period and month.</p>
+                <p>Try changing the period filter or month selection.</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -262,6 +259,15 @@ import { AuthService } from '../../services/auth.service';
       <div *ngIf="loading" class="loading-container">
         <div class="loading-spinner"></div>
         <p>Loading payroll data...</p>
+      </div>
+
+      <!-- Payroll Exists Modal -->
+      <div *ngIf="showPayrollExistsModal" class="modal-overlay">
+        <div class="modal-content">
+          <h2>{{ modalTitle }}</h2>
+          <p>{{ modalMessage }}</p>
+          <button class="btn-primary" (click)="closePayrollExistsModal()">OK</button>
+        </div>
       </div>
     </div>
   `,
@@ -303,30 +309,6 @@ import { AuthService } from '../../services/auth.service';
       display: flex;
       align-items: center;
       gap: 20px;
-    }
-
-    .period-selector {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .period-selector label {
-      font-weight: 500;
-    }
-
-    .period-select {
-      padding: 8px 12px;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      border-radius: 6px;
-      background: rgba(255, 255, 255, 0.1);
-      color: white;
-      font-size: 14px;
-    }
-
-    .period-select option {
-      background: var(--primary-dark);
-      color: white;
     }
 
     .payroll-content {
@@ -704,6 +686,85 @@ import { AuthService } from '../../services/auth.service';
       100% { transform: rotate(360deg); }
     }
 
+    .no-records {
+      text-align: center;
+      padding: 40px 20px;
+      color: #666;
+    }
+
+    .no-records-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .no-records-content svg {
+      color: #e0e0e0;
+    }
+
+    .no-records-content h3 {
+      color: #333;
+      margin-bottom: 5px;
+    }
+
+    .no-records-content p {
+      font-size: 14px;
+      line-height: 1.5;
+      color: #777;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      max-width: 400px;
+      width: 90%;
+    }
+
+    .modal-content h2 {
+      color: #333;
+      margin-bottom: 15px;
+      font-size: 24px;
+    }
+
+    .modal-content p {
+      color: #555;
+      margin-bottom: 25px;
+      font-size: 16px;
+    }
+
+    .modal-content .btn-primary {
+      padding: 12px 25px;
+      font-size: 16px;
+    }
+    
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      background: #9ca3af;
+    }
+    
+    .btn-primary:disabled:hover {
+      background: #9ca3af;
+      transform: none;
+    }
+
     @media (max-width: 768px) {
       .header-content {
         flex-direction: column;
@@ -740,7 +801,6 @@ export class PayrollComponent implements OnInit {
   loading = true;
   isGenerating = false;
   isSyncing = false;
-  selectedPeriod = 'current';
   historyMonth = new Date().toISOString().slice(0, 7);
 
   payrollData = {
@@ -775,11 +835,23 @@ export class PayrollComponent implements OnInit {
   ];
 
   payrollHistory = [
-    { period: 'January 2024', grossSalary: 7500, deductions: 1700, netPay: 5800, status: 'paid' },
-    { period: 'December 2023', grossSalary: 7000, deductions: 1600, netPay: 5400, status: 'paid' },
-    { period: 'November 2023', grossSalary: 7000, deductions: 1600, netPay: 5400, status: 'paid' },
-    { period: 'October 2023', grossSalary: 7000, deductions: 1600, netPay: 5400, status: 'paid' }
+    { period: 'July 2025', grossSalary: 8200, deductions: 1750, netPay: 6450, status: 'paid' },
+    { period: 'June 2025', grossSalary: 8000, deductions: 1700, netPay: 6300, status: 'paid' },
+    { period: 'May 2025', grossSalary: 7800, deductions: 1650, netPay: 6150, status: 'paid' },
+    { period: 'April 2025', grossSalary: 7500, deductions: 1600, netPay: 5900, status: 'paid' },
+    { period: 'March 2025', grossSalary: 7200, deductions: 1550, netPay: 5650, status: 'paid' },
+    { period: 'February 2025', grossSalary: 7000, deductions: 1500, netPay: 5500, status: 'paid' },
+    { period: 'January 2025', grossSalary: 6800, deductions: 1450, netPay: 5350, status: 'paid' }
   ];
+
+  // Filtered payroll history based on selected period
+  filteredPayrollHistory: any[] = [];
+  
+  // Modal states
+  showPayrollExistsModal = false;
+  existingPayrollPeriod = '';
+  modalMessage = '';
+  modalTitle = '';
 
   constructor(
     private payrollService: PayrollService,
@@ -800,25 +872,105 @@ export class PayrollComponent implements OnInit {
   }
 
   loadPayrollHistory(): void {
-    // Load payroll history based on selected month
-    console.log('Loading payroll history for:', this.historyMonth);
+    // Filter payroll history based on selected period
+    this.filterPayrollHistory();
+    console.log('Loading payroll history for period:', this.historyMonth);
   }
 
-  onPeriodChange(): void {
-    this.loadPayrollData();
+  filterPayrollHistory(): void {
+    // Since we removed the period selector, filter directly by month picker
+    if (this.historyMonth && this.historyMonth !== '') {
+      const [year, month] = this.historyMonth.split('-');
+      const selectedYear = parseInt(year);
+      const selectedMonth = parseInt(month) - 1; // Month is 0-indexed
+      
+      this.filteredPayrollHistory = this.payrollHistory.filter(record => {
+        const recordDate = this.parsePeriodToDate(record.period);
+        return recordDate.getFullYear() === selectedYear && recordDate.getMonth() === selectedMonth;
+      });
+    } else {
+      // If no month is selected, show all records
+      this.filteredPayrollHistory = this.payrollHistory;
+    }
+    
+    // If no records found for the selected month, show a message
+    if (this.filteredPayrollHistory.length === 0) {
+      console.log('No payroll records found for month:', this.historyMonth);
+    }
+  }
+
+  parsePeriodToDate(period: string): Date {
+    // Parse period like "August 2025" to Date object
+    const [month, year] = period.split(' ');
+    const monthIndex = new Date(`${month} 1, ${year}`).getMonth();
+    return new Date(parseInt(year), monthIndex);
+  }
+
+  onHistoryMonthChange(): void {
+    this.loadPayrollHistory();
   }
 
   generatePayroll(): void {
     this.isGenerating = true;
-    // Simulate payroll generation
-    setTimeout(() => {
+    
+    // Get current month and year
+    const currentDate = new Date();
+    const currentMonth = currentDate.toLocaleString('default', { month: 'long' });
+    const currentYear = currentDate.getFullYear();
+    const period = `${currentMonth} ${currentYear}`;
+    
+    // Check if we can generate payroll (only after month end - 29th or later)
+    const currentDay = currentDate.getDate();
+    if (currentDay < 29) {
+      const daysLeft = 29 - currentDay;
+      this.modalTitle = 'Payroll Generation Not Available';
+      this.modalMessage = `You cannot generate payroll in the middle of the month. Please wait until the 29th of ${currentMonth} (${daysLeft} days left).`;
+      this.showPayrollExistsModal = true;
       this.isGenerating = false;
-      console.log('Payroll generated successfully');
+      return;
+    }
+    
+    // Check if payroll already exists for current month
+    const existingPayroll = this.payrollHistory.find(record => record.period === period);
+    
+    if (existingPayroll) {
+      this.modalTitle = 'Payroll Already Exists';
+      this.modalMessage = `A payroll record for ${period} already exists. Please choose a different period or month.`;
+      this.showPayrollExistsModal = true;
+      this.isGenerating = false;
+      return;
+    }
+    
+    // Simulate payroll generation with realistic data
+    setTimeout(() => {
+      // Generate new payroll record
+      const newPayroll = {
+        period: period,
+        grossSalary: Math.floor(Math.random() * 2000) + 7000, // Random between 7000-9000
+        deductions: Math.floor(Math.random() * 500) + 1500,   // Random between 1500-2000
+        netPay: 0,
+        status: 'pending'
+      };
+      
+      // Calculate net pay
+      newPayroll.netPay = newPayroll.grossSalary - newPayroll.deductions;
+      
+      // Add to payroll history
+      this.payrollHistory.unshift(newPayroll);
+      
+      // Refresh filtered history
+      this.filterPayrollHistory();
+      
+      this.isGenerating = false;
+      console.log('Payroll generated successfully for:', period);
+      
+      // Show success message
+      alert(`Payroll generated successfully for ${period}!\nGross: ₹${newPayroll.grossSalary}\nDeductions: ₹${newPayroll.deductions}\nNet Pay: ₹${newPayroll.netPay}`);
     }, 2000);
   }
 
   downloadPayslip(record?: any): void {
-    const period = record ? record.period : 'Current Month';
+    const period = record ? record.period : this.getCurrentMonthName();
     console.log('Downloading payslip for:', period);
     
     // Create payslip content as HTML
@@ -826,6 +978,11 @@ export class PayrollComponent implements OnInit {
     
     // Convert HTML to PDF using jsPDF
     this.convertHtmlToPdf(payslipContent, `payslip-${period.replace(' ', '-').toLowerCase()}.pdf`);
+  }
+
+  getCurrentMonthName(): string {
+    const currentDate = new Date();
+    return currentDate.toLocaleString('default', { month: 'long' }) + ' ' + currentDate.getFullYear();
   }
 
   private convertHtmlToPdf(htmlContent: string, filename: string): void {
@@ -1431,5 +1588,10 @@ export class PayrollComponent implements OnInit {
       `);
       newWindow.document.close();
     }
+  }
+
+  closePayrollExistsModal(): void {
+    this.showPayrollExistsModal = false;
+    this.existingPayrollPeriod = '';
   }
 } 

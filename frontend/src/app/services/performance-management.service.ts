@@ -56,6 +56,12 @@ export interface Appraisal {
   managerComments?: string;
 }
 
+export interface RatingTrendPoint {
+  period: string;
+  rating: number;
+  appraisalDate?: string;
+}
+
 export interface AISuggestion {
   id?: number;
   userId: number;
@@ -71,6 +77,20 @@ export interface AISuggestion {
   dismissedAt?: string;
   aiScore?: number;
   implementationNotes?: string;
+}
+
+export interface FeedbackRequest {
+  id?: number;
+  requesterId: number;
+  requesterName?: string;
+  recipientId: number;
+  recipientName?: string;
+  feedbackType: 'SELF' | 'PEER' | 'MANAGER' | 'SUBORDINATE';
+  reviewPeriod?: string;
+  status?: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'COMPLETED' | 'EXPIRED';
+  message?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PerformanceStatistics {
@@ -203,6 +223,11 @@ export class PerformanceManagementService {
     return this.http.get<PerformanceStatistics>(`${this.apiUrl}/appraisals/statistics`);
   }
 
+  // Rating trends by employee (completed appraisals)
+  getRatingTrends(employeeId: number): Observable<RatingTrendPoint[]> {
+    return this.http.get<RatingTrendPoint[]>(`${this.apiUrl}/rating-trends/${employeeId}`);
+  }
+
   // ==================== AI SUGGESTIONS ====================
 
   createSuggestion(suggestion: AISuggestion): Observable<AISuggestion> {
@@ -275,6 +300,28 @@ export class PerformanceManagementService {
 
   getAccessibleDepartments(): Observable<string[]> {
     return this.http.get<string[]>(`${this.apiUrl}/departments`);
+  }
+
+  // ==================== FEEDBACK REQUESTS ====================
+
+  createFeedbackRequest(request: FeedbackRequest): Observable<FeedbackRequest> {
+    return this.http.post<FeedbackRequest>(`${this.apiUrl}/feedback/requests`, request);
+  }
+
+  updateFeedbackRequestStatus(requestId: number, status: string): Observable<FeedbackRequest> {
+    return this.http.put<FeedbackRequest>(`${this.apiUrl}/feedback/requests/${requestId}/status?status=${status}`, {});
+  }
+
+  getFeedbackRequestsForUser(): Observable<FeedbackRequest[]> {
+    return this.http.get<FeedbackRequest[]>(`${this.apiUrl}/feedback/requests/received`);
+  }
+
+  getFeedbackRequestsFromUser(): Observable<FeedbackRequest[]> {
+    return this.http.get<FeedbackRequest[]>(`${this.apiUrl}/feedback/requests/sent`);
+  }
+
+  getPendingFeedbackRequests(): Observable<FeedbackRequest[]> {
+    return this.http.get<FeedbackRequest[]>(`${this.apiUrl}/feedback/requests/pending`);
   }
 
   // ==================== MOCK DATA FOR DEVELOPMENT ====================

@@ -3,8 +3,10 @@ import { ActivatedRoute } from '@angular/router';
 import { UserService } from '../../services/user.service';
 import { AttendanceService } from '../../services/attendance.service';
 import { User } from '../../models/user.model';
+import { ReviewService, Review } from '../../services/review.service';
 import { ProjectAssignmentModalComponent } from '../../shared/project-assignment-modal/project-assignment-modal.component';
 import { DocumentUploadModalComponent } from '../../shared/document-upload-modal/document-upload-modal.component';
+import { ReviewModalComponent } from '../../shared/review-modal/review-modal.component';
 import { ProjectService, Project } from '../../services/project.service';
 import { DocumentService, Document } from '../../services/document.service';
 import { AuthService } from '../../services/auth.service';
@@ -116,22 +118,22 @@ import { AuthService } from '../../services/auth.service';
               <div class="job-info-grid">
                 <div class="info-card">
                   <h3>Position Details</h3>
-                                     <div class="info-item">
-                     <span class="label">Job Title:</span>
-                     <span class="value">{{ employee.role ? employee.role : 'Not specified' }}</span>
-                   </div>
-                   <div class="info-item">
-                     <span class="label">Department:</span>
-                     <span class="value">{{ employee.department }}</span>
-                   </div>
-                   <div class="info-item">
-                     <span class="label">Role:</span>
-                     <span class="value">{{ employee.role }}</span>
-                   </div>
-                   <div class="info-item">
-                     <span class="label">Manager:</span>
-                     <span class="value">{{ employee.managerId ? 'Manager ID: ' + employee.managerId : 'Not assigned' }}</span>
-                   </div>
+                  <div class="info-item">
+                    <span class="label">Job Title:</span>
+                    <span class="value">{{ employee.role ? employee.role : 'Not specified' }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="label">Department:</span>
+                    <span class="value">{{ employee.department }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="label">Role:</span>
+                    <span class="value">{{ employee.role }}</span>
+                  </div>
+                  <div class="info-item" *ngIf="employee.role !== 'MANAGER'">
+                    <span class="label">Manager:</span>
+                    <span class="value">{{ managerName ? managerName : 'Not assigned' }}</span>
+                  </div>
                 </div>
 
                 <div class="info-card">
@@ -229,7 +231,7 @@ import { AuthService } from '../../services/auth.service';
             <div *ngIf="activeTab === 'projects'" class="tab-panel">
               <div class="projects-header">
                 <h3>Projects</h3>
-                <button class="btn-primary" (click)="assignProject()">
+                <button class="btn-primary" (click)="assignProject()" *ngIf="!isAdmin() && isAdminOrManager()">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
@@ -257,7 +259,7 @@ import { AuthService } from '../../services/auth.service';
             <div *ngIf="activeTab === 'reviews'" class="tab-panel">
               <div class="reviews-header">
                 <h3>Performance Reviews</h3>
-                <button class="btn-primary" (click)="createReview()">
+                <button class="btn-primary" (click)="createReview()" *ngIf="!isAdmin() && isAdminOrManager()">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
@@ -268,7 +270,7 @@ import { AuthService } from '../../services/auth.service';
                 <div class="review-card" *ngFor="let review of reviews">
                   <div class="review-header">
                     <h4>{{ review.title }}</h4>
-                    <span class="review-date">{{ review.date | date:'mediumDate' }}</span>
+                    <span class="review-date">{{ review.reviewDate | date:'mediumDate' }}</span>
                   </div>
                   <div class="review-rating">
                     <span class="rating-label">Overall Rating:</span>
@@ -278,7 +280,7 @@ import { AuthService } from '../../services/auth.service';
                   </div>
                   <p class="review-summary">{{ review.summary }}</p>
                   <div class="reviewer">
-                    <span>Reviewed by: {{ review.reviewer }}</span>
+                    <span>Reviewed by: {{ review.reviewerName }}</span>
                   </div>
                 </div>
               </div>
@@ -318,6 +320,15 @@ import { AuthService } from '../../services/auth.service';
         (close)="closeDocumentModal()"
         (upload)="onDocumentUploaded($event)">
       </app-document-upload-modal>
+
+      <!-- Review Modal -->
+      <app-review-modal
+        [isOpen]="showReviewModal"
+        [employeeId]="employee?.id || null"
+        [employeeName]="employee ? employee.firstName + ' ' + employee.lastName : ''"
+        (close)="closeReviewModal()"
+        (create)="onReviewCreated($event)">
+      </app-review-modal>
     </div>
   `,
   styles: [`
@@ -796,18 +807,17 @@ export class EmployeeProfileComponent implements OnInit {
   activeTab = 'overview';
   showProjectModal = false;
   showDocumentModal = false;
+  showReviewModal = false; // Add review modal property
   
   documents: Document[] = [];
+  managerName: string | null = null;
 
   attendanceRecords: any[] = [];
   attendanceDate = new Date().toISOString().split('T')[0];
 
   projects: Project[] = [];
 
-  reviews = [
-    { id: 1, title: 'Annual Performance Review 2024', date: new Date('2024-01-15'), rating: 4, summary: 'Excellent performance throughout the year', reviewer: 'John Manager' },
-    { id: 2, title: 'Mid-Year Review 2023', date: new Date('2023-07-15'), rating: 5, summary: 'Outstanding contribution to team projects', reviewer: 'Sarah Director' }
-  ];
+  reviews: Review[] = []; // Changed from 'reviews' to 'reviews'
 
   tabs = [
     { id: 'overview', label: 'Overview' },
@@ -824,12 +834,12 @@ export class EmployeeProfileComponent implements OnInit {
     private attendanceService: AttendanceService,
     private projectService: ProjectService,
     private documentService: DocumentService,
-    private authService: AuthService
+    private authService: AuthService,
+    private reviewService: ReviewService // Added review service
   ) {}
 
   ngOnInit(): void {
     this.loadEmployee();
-    this.loadProjects();
   }
 
   loadEmployee(): void {
@@ -846,9 +856,19 @@ export class EmployeeProfileComponent implements OnInit {
     this.userService.getUserById(+employeeId).subscribe({
       next: (user) => {
         this.employee = user;
+        // Resolve manager name if present and employee is not a MANAGER
+        if (this.employee.managerId && this.employee.role !== 'MANAGER') {
+          this.userService.getUserById(this.employee.managerId).subscribe({
+            next: (mgr) => { this.managerName = mgr.firstName + ' ' + mgr.lastName; },
+            error: () => { this.managerName = null; }
+          });
+        } else {
+          this.managerName = null;
+        }
         this.loadAttendanceRecords();
         this.loadProjects(); // Load projects after employee is loaded
         this.loadDocuments(); // Load documents after employee is loaded
+        this.loadReviews(); // Load reviews after employee is loaded
         this.loading = false;
       },
       error: (error) => {
@@ -888,6 +908,14 @@ export class EmployeeProfileComponent implements OnInit {
     }
   }
 
+  loadReviews(): void {
+    if (this.employee?.id) {
+      this.reviewService.getReviewsByEmployee(this.employee.id).subscribe(reviews => {
+        this.reviews = reviews;
+      });
+    }
+  }
+
   setActiveTab(tabId: string): void {
     this.activeTab = tabId;
   }
@@ -901,6 +929,12 @@ export class EmployeeProfileComponent implements OnInit {
     const currentUser = this.authService.getCurrentUser();
     if (!currentUser) return false;
     return currentUser.role === 'ADMIN' || currentUser.role === 'MANAGER';
+  }
+
+  isAdmin(): boolean {
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser) return false;
+    return currentUser.role === 'ADMIN';
   }
 
   getAttendanceStatusClass(status: string): string {
@@ -1213,7 +1247,35 @@ Document: ${doc.name}`;
   }
 
   createReview(): void {
-    // Implement review creation
-    console.log('Create review');
+    this.showReviewModal = true;
+  }
+
+  closeReviewModal(): void {
+    this.showReviewModal = false;
+  }
+
+  onReviewCreated(reviewData: any): void {
+    const createReviewRequest = {
+      employeeId: this.employee?.id || 0,
+      reviewerId: this.authService.getCurrentUser()?.id || 0,
+      title: reviewData.title,
+      rating: reviewData.rating,
+      summary: reviewData.summary,
+      strengths: reviewData.strengths,
+      improvements: reviewData.improvements,
+      goals: reviewData.goals
+    };
+
+    this.reviewService.createReview(createReviewRequest).subscribe({
+      next: (review: Review) => {
+        this.loadReviews(); // Reload reviews to show the new review
+        this.closeReviewModal();
+        console.log('Review created:', review);
+      },
+      error: (error: any) => {
+        console.error('Error creating review:', error);
+        this.closeReviewModal();
+      }
+    });
   }
 } 

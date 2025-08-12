@@ -321,4 +321,67 @@ public interface LeaveRepository extends JpaRepository<Leave, Long> {
         @Param("endDate") java.time.LocalDate endDate, 
         @Param("query") String query, 
         org.springframework.data.domain.Pageable pageable);
+
+    // Pageable queries for department filtering
+    org.springframework.data.domain.Page<Leave> findByUser_Department(User.Department department, org.springframework.data.domain.Pageable pageable);
+    org.springframework.data.domain.Page<Leave> findByUser_DepartmentAndStatus(User.Department department, Leave.LeaveStatus status, org.springframework.data.domain.Pageable pageable);
+    
+    // Additional department-scoped methods for manager filtering
+    @Query("SELECT l FROM Leave l WHERE l.user.department = :department AND l.user.id = :userId")
+    org.springframework.data.domain.Page<Leave> findByUser_DepartmentAndUserId(
+        @Param("department") User.Department department, 
+        @Param("userId") Long userId, 
+        org.springframework.data.domain.Pageable pageable);
+    
+    @Query("SELECT l FROM Leave l WHERE l.user.department = :department AND l.leaveType = :leaveType")
+    org.springframework.data.domain.Page<Leave> findByUser_DepartmentAndLeaveType(
+        @Param("department") User.Department department, 
+        @Param("leaveType") Leave.LeaveType leaveType, 
+        org.springframework.data.domain.Pageable pageable);
+    
+    @Query("SELECT l FROM Leave l WHERE l.user.department = :department AND l.reason LIKE %:query%")
+    org.springframework.data.domain.Page<Leave> findByUser_DepartmentAndReasonContainingIgnoreCase(
+        @Param("department") User.Department department, 
+        @Param("query") String query, 
+        org.springframework.data.domain.Pageable pageable);
+    
+    @Query("SELECT l FROM Leave l WHERE l.user.department = :department AND l.user.id = :userId AND l.leaveType = :leaveType")
+    org.springframework.data.domain.Page<Leave> findByUser_DepartmentAndUserIdAndLeaveType(
+        @Param("department") User.Department department, 
+        @Param("userId") Long userId, 
+        @Param("leaveType") Leave.LeaveType leaveType, 
+        org.springframework.data.domain.Pageable pageable);
+    
+    @Query("SELECT l FROM Leave l WHERE l.user.department = :department AND l.user.id = :userId AND l.status = :status")
+    org.springframework.data.domain.Page<Leave> findByUser_DepartmentAndUserIdAndStatus(
+        @Param("department") User.Department department, 
+        @Param("userId") Long userId, 
+        @Param("status") Leave.LeaveStatus status, 
+        org.springframework.data.domain.Pageable pageable);
+    
+    @Query("SELECT l FROM Leave l WHERE l.user.department = :department AND l.leaveType = :leaveType AND l.status = :status")
+    org.springframework.data.domain.Page<Leave> findByUser_DepartmentAndLeaveTypeAndStatus(
+        @Param("department") User.Department department, 
+        @Param("leaveType") Leave.LeaveType leaveType, 
+        @Param("status") Leave.LeaveStatus status, 
+        org.springframework.data.domain.Pageable pageable);
+    
+    @Query("SELECT l FROM Leave l WHERE l.user.department = :department AND l.user.id = :userId AND l.leaveType = :leaveType AND l.status = :status")
+    org.springframework.data.domain.Page<Leave> findByUser_DepartmentAndUserIdAndLeaveTypeAndStatus(
+        @Param("department") User.Department department, 
+        @Param("userId") Long userId, 
+        @Param("leaveType") Leave.LeaveType leaveType, 
+        @Param("status") Leave.LeaveStatus status, 
+        org.springframework.data.domain.Pageable pageable);
+    
+    @Query("SELECT l FROM Leave l WHERE l.user.department = :department AND l.user.id = :userId AND l.leaveType = :leaveType AND l.status = :status AND l.startDate BETWEEN :startDate AND :endDate AND l.reason LIKE %:query%")
+    org.springframework.data.domain.Page<Leave> findByUser_DepartmentAndUserIdAndLeaveTypeAndStatusAndStartDateBetweenAndReasonContainingIgnoreCase(
+        @Param("department") User.Department department,
+        @Param("userId") Long userId, 
+        @Param("leaveType") Leave.LeaveType leaveType, 
+        @Param("status") Leave.LeaveStatus status, 
+        @Param("startDate") java.time.LocalDate startDate, 
+        @Param("endDate") java.time.LocalDate endDate, 
+        @Param("query") String query, 
+        org.springframework.data.domain.Pageable pageable);
 } 

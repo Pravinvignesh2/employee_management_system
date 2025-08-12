@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 public class UserDto {
     
@@ -37,7 +38,7 @@ public class UserDto {
     
     private User.UserStatus status;
     private String profileImage;
-    private LocalDateTime dateOfBirth;
+    private LocalDate dateOfBirth;
     private LocalDateTime dateOfJoining;
     private String address;
     private String emergencyContact;
@@ -151,11 +152,11 @@ public class UserDto {
         this.profileImage = profileImage;
     }
     
-    public LocalDateTime getDateOfBirth() {
+    public LocalDate getDateOfBirth() {
         return dateOfBirth;
     }
     
-    public void setDateOfBirth(LocalDateTime dateOfBirth) {
+    public void setDateOfBirth(LocalDate dateOfBirth) {
         this.dateOfBirth = dateOfBirth;
     }
     

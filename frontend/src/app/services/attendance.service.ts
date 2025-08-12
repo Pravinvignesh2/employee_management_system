@@ -15,6 +15,7 @@ import {
   AttendanceReport,
   AttendanceSummary
 } from '../models/attendance.model';
+import { Department } from '../models/user.model';
 
 @Injectable({
   providedIn: 'root'
@@ -142,8 +143,8 @@ export class AttendanceService {
     return this.http.get<Attendance[]>(`${this.apiUrl}/user/${userId}/range`, { params });
   }
 
-  getAttendanceByDepartmentAndDate(department: string, date: string): Observable<Attendance[]> {
-    return this.http.get<Attendance[]>(`${this.apiUrl}/department/${department}/date/${date}`);
+  getAttendanceByDepartmentAndDate(department: Department, date: string): Observable<Attendance[]> {
+    return this.http.get<Attendance[]>(`${this.apiUrl}/department/${encodeURIComponent(department)}/date/${date}`);
   }
 
   getAttendanceByStatus(status: AttendanceStatus): Observable<Attendance[]> {
@@ -191,6 +192,11 @@ export class AttendanceService {
       .set('endDate', endDate);
     
     return this.http.get<number>(`${this.apiUrl}/total-working-hours/${userId}`, { params });
+  }
+
+  // Update attendance status for a specific date
+  updateAttendanceStatusForDate(date: string): Observable<string> {
+    return this.http.post<string>(`${this.apiUrl}/update-status-for-date/${date}`, {});
   }
 
   // Helper Methods

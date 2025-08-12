@@ -1,9 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { UserService } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
 import { User, UserResponse } from '../../models/user.model';
+import { ReviewService, Review } from '../../services/review.service';
 import { ProjectService, Project } from '../../services/project.service';
 import { DocumentService, Document } from '../../services/document.service';
 
@@ -16,7 +17,7 @@ import { DocumentService, Document } from '../../services/document.service';
         <div class="header-content">
           <h1>My Profile</h1>
           <div class="header-actions">
-            <button *ngIf="!isEditMode" class="btn-secondary" (click)="toggleEditMode()">
+            <button *ngIf="!isEditMode && activeTab === 'personal'" class="btn-secondary" (click)="toggleEditMode()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 18.9609 21.7893 19.3358 21.4142C19.7107 21.0391 19.9214 20.5304 19.9214 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -271,7 +272,7 @@ import { DocumentService, Document } from '../../services/document.service';
                 <div class="review-card" *ngFor="let review of reviews">
                   <div class="review-header">
                     <h4>{{ review.title }}</h4>
-                    <span class="review-date">{{ review.date | date:'mediumDate' }}</span>
+                    <span class="review-date">{{ review.reviewDate | date:'mediumDate' }}</span>
                   </div>
                   <div class="review-rating">
                     <span class="rating-label">Overall Rating:</span>
@@ -281,7 +282,7 @@ import { DocumentService, Document } from '../../services/document.service';
                   </div>
                   <p class="review-summary">{{ review.summary }}</p>
                   <div class="reviewer">
-                    <span>Reviewed by: {{ review.reviewer }}</span>
+                    <span>Reviewed by: {{ review.reviewerName }}</span>
                   </div>
                 </div>
               </div>
@@ -803,10 +804,7 @@ export class ProfileComponent implements OnInit {
 
   projects: Project[] = [];
 
-  reviews = [
-    { id: 1, title: 'Annual Performance Review 2024', date: new Date('2024-01-15'), rating: 4, summary: 'Excellent performance throughout the year', reviewer: 'John Manager' },
-    { id: 2, title: 'Mid-Year Review 2023', date: new Date('2023-07-15'), rating: 5, summary: 'Outstanding contribution to team projects', reviewer: 'Sarah Director' }
-  ];
+  reviews: Review[] = [];
 
   tabs = [
     { id: 'personal', label: 'Personal Info' },
@@ -822,8 +820,10 @@ export class ProfileComponent implements OnInit {
     private authService: AuthService,
     private projectService: ProjectService,
     private documentService: DocumentService,
+    private reviewService: ReviewService,
     private fb: FormBuilder,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private router: Router
   ) {
     this.profileForm = this.fb.group({
       firstName: [''],
@@ -837,6 +837,7 @@ export class ProfileComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadCurrentUser();
+    this.loadReviews();
     
     // Check for query parameters to automatically enter edit mode
     this.route.queryParams.subscribe(params => {
@@ -845,6 +846,8 @@ export class ProfileComponent implements OnInit {
         setTimeout(() => {
           if (this.currentUser) {
             this.isEditMode = true;
+            // Clear the query parameter after entering edit mode
+            this.router.navigate(['/profile'], { replaceUrl: true });
           }
         }, 100);
       }
@@ -920,7 +923,7 @@ export class ProfileComponent implements OnInit {
         lastName: this.currentUser.lastName,
         email: this.currentUser.email,
         phoneNumber: this.profileForm.value.phoneNumber,
-        dateOfBirth: this.profileForm.value.dateOfBirth ? new Date(this.profileForm.value.dateOfBirth) : undefined,
+        dateOfBirth: this.profileForm.value.dateOfBirth ? this.profileForm.value.dateOfBirth : undefined,
         address: this.profileForm.value.address,
         emergencyContact: this.profileForm.value.emergencyContact,
         role: this.currentUser.role,
@@ -1050,6 +1053,13 @@ export class ProfileComponent implements OnInit {
     });
   }
 
+  loadReviews(): void {
+    if (!this.currentUser?.id) return;
+    this.reviewService.getReviewsByEmployee(this.currentUser.id).subscribe(reviews => {
+      this.reviews = reviews;
+    });
+  }
+
   toggleEditMode(): void {
     this.isEditMode = true;
   }
@@ -1168,4 +1178,4 @@ and is maintained as part of the employee's official records.
 
 Document: ${doc.name}`;
   }
-} 
+}

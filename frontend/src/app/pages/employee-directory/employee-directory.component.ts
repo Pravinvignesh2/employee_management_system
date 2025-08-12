@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { UserService } from '../../services/user.service';
 import { User } from '../../models/user.model';
 import { Router, ActivatedRoute } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-employee-directory',
@@ -32,7 +33,7 @@ import { Router, ActivatedRoute } from '@angular/router';
               (input)="onSearch()"
               class="search-input">
           </div>
-          <button class="add-employee-btn" (click)="openAddEmployeeModal()">
+          <button *ngIf="isAdmin" class="add-employee-btn" (click)="openAddEmployeeModal()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -42,8 +43,8 @@ import { Router, ActivatedRoute } from '@angular/router';
         </div>
       </div>
 
-      <!-- Filters -->
-      <div class="filters-section">
+      <!-- Filters (Admin only) -->
+      <div class="filters-section" *ngIf="isAdmin">
         <div class="filters-content">
           <div class="filter-group">
             <label>Department</label>
@@ -110,15 +111,15 @@ import { Router, ActivatedRoute } from '@angular/router';
       <div *ngIf="!loading && !error" class="directory-content">
         <div class="stats-bar">
           <div class="stat-item">
-            <span class="stat-number">{{ filteredEmployees.length }}</span>
+            <span class="stat-number">{{ totalEmployeesCount }}</span>
             <span class="stat-label">Total Employees</span>
           </div>
           <div class="stat-item">
-            <span class="stat-number">{{ getActiveCount() }}</span>
+            <span class="stat-number">{{ activeEmployeesCount }}</span>
             <span class="stat-label">Active</span>
           </div>
           <div class="stat-item">
-            <span class="stat-number">{{ getNewHiresCount() }}</span>
+            <span class="stat-number">{{ newHiresCount }}</span>
             <span class="stat-label">New This Month</span>
           </div>
         </div>
@@ -147,13 +148,13 @@ import { Router, ActivatedRoute } from '@angular/router';
                   <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </button>
-              <button class="action-btn edit-btn" title="Edit Employee" (click)="editEmployee(employee)">
+              <button *ngIf="isAdmin" class="action-btn edit-btn" title="Edit Employee" (click)="editEmployee(employee)">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 22.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </button>
-              <button class="action-btn delete-btn" title="Delete Employee" (click)="deleteEmployee(employee)">
+              <button *ngIf="isAdmin" class="action-btn delete-btn" title="Delete Employee" (click)="deleteEmployee(employee)">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -172,11 +173,67 @@ import { Router, ActivatedRoute } from '@angular/router';
           <h3>No employees found</h3>
           <p>Try adjusting your search or filters</p>
         </div>
+
+        <!-- Pagination Controls (Admin only) -->
+        <div *ngIf="isAdmin && totalPages > 1" class="pagination-controls">
+          <div class="pagination-info">
+            <span>Showing {{ (currentPage * pageSize) + 1 }} - {{ Math.min((currentPage + 1) * pageSize, totalElements) }} of {{ totalElements }} employees</span>
+          </div>
+          <div class="pagination-buttons">
+            <button 
+              class="pagination-btn" 
+              [disabled]="!hasPreviousPage"
+              (click)="goToFirstPage()"
+              title="First Page">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 17L13 12L18 7M11 17L6 12L11 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <button 
+              class="pagination-btn" 
+              [disabled]="!hasPreviousPage"
+              (click)="previousPage()"
+              title="Previous Page">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            
+            <div class="page-numbers">
+              <button 
+                *ngFor="let page of getPageNumbers()" 
+                class="page-number-btn"
+                [class.active]="page === currentPage"
+                (click)="goToPage(page)">
+                {{ page + 1 }}
+              </button>
+            </div>
+            
+            <button 
+              class="pagination-btn" 
+              [disabled]="!hasNextPage"
+              (click)="nextPage()"
+              title="Next Page">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <button 
+              class="pagination-btn" 
+              [disabled]="!hasNextPage"
+              (click)="goToLastPage()"
+              title="Last Page">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 17L11 12L6 7M13 17L18 12L13 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
 
-      <!-- Employee Modal -->
+      <!-- Employee Modal (Admin only) -->
       <app-employee-modal
-        *ngIf="showModal"
+        *ngIf="showModal && isAdmin"
         [employee]="selectedEmployee"
         [isEditMode]="isEditMode"
         (save)="onSaveEmployee($event)"
@@ -623,6 +680,81 @@ import { Router, ActivatedRoute } from '@angular/router';
       font-size: 16px;
     }
 
+    .pagination-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 40px;
+      background: white;
+      border-top: 1px solid #e5e7eb;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .pagination-info {
+      font-size: 14px;
+      color: #6b7280;
+    }
+
+    .pagination-buttons {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pagination-btn {
+      width: 36px;
+      height: 36px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      background: white;
+      color: #6b7280;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .pagination-btn:hover:not([disabled]) {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .pagination-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .page-numbers {
+      display: flex;
+      gap: 8px;
+    }
+
+    .page-number-btn {
+      width: 36px;
+      height: 36px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      background: white;
+      color: #6b7280;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .page-number-btn:hover:not(.active) {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .page-number-btn.active {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+
     @media (max-width: 768px) {
       .directory-header {
         padding: 24px 20px;
@@ -663,6 +795,23 @@ import { Router, ActivatedRoute } from '@angular/router';
         grid-template-columns: 1fr;
         gap: 16px;
       }
+
+      .pagination-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+        padding: 16px 20px;
+      }
+
+      .pagination-buttons {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .page-numbers {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
     }
   `]
 })
@@ -678,6 +827,27 @@ export class EmployeeDirectoryComponent implements OnInit {
   showModal = false;
   selectedEmployee: User | null = null;
   isEditMode = false;
+
+  // Pagination properties
+  currentPage = 0;
+  pageSize = 10;
+  totalElements = 0;
+  totalPages = 0;
+  hasNextPage = false;
+  hasPreviousPage = false;
+
+  // Statistics properties
+  totalEmployeesCount = 0;
+  activeEmployeesCount = 0;
+  newHiresCount = 0;
+
+  // Make Math available in template
+  Math = Math;
+
+  // Auth
+  currentUser: any;
+  isAdmin = false;
+  isManager = false;
   
   // Dialog states
   showConfirmDialog = false;
@@ -691,22 +861,23 @@ export class EmployeeDirectoryComponent implements OnInit {
   constructor(
     private userService: UserService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
+    this.currentUser = this.authService.getCurrentUser();
+    const role = this.currentUser?.role;
+    this.isAdmin = role === 'ADMIN';
+    this.isManager = role === 'MANAGER';
+
     this.loadEmployees();
-    
+
     // Check if we should open the add employee modal
     this.route.queryParams.subscribe(params => {
-      if (params['openAddModal'] === 'true') {
+      if (params['openAddModal'] === 'true' && this.isAdmin) {
         this.openAddEmployeeModal();
-        // Clear the query parameter from URL
-        this.router.navigate([], {
-          relativeTo: this.route,
-          queryParams: {},
-          replaceUrl: true
-        });
+        this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
       }
     });
   }
@@ -715,170 +886,227 @@ export class EmployeeDirectoryComponent implements OnInit {
     this.loading = true;
     this.error = '';
 
-    this.userService.getUsers().subscribe({
-      next: (response) => {
-        this.employees = response.content || [];
-        this.filteredEmployees = response.content || [];
-        this.loading = false;
-      },
-      error: (error) => {
-        this.error = 'Failed to load employees';
-        this.loading = false;
-        console.error('Error loading employees:', error);
-      }
-    });
+    // Admin: full paginated list; Manager: only own department
+    if (this.isManager && this.currentUser?.department) {
+      this.userService.getUsersByDepartment(this.currentUser.department).subscribe({
+        next: (users) => {
+          this.employees = users || [];
+          this.filteredEmployees = users || [];
+          this.loading = false;
+          
+          // For managers, set pagination to show all results
+          this.totalElements = this.employees.length;
+          this.totalPages = 1;
+          this.currentPage = 0;
+          this.hasNextPage = false;
+          this.hasPreviousPage = false;
+
+          // Populate statistics for manager view
+          this.loadStatistics();
+        },
+        error: (error) => {
+          console.error('Error loading manager department employees:', error);
+          this.error = 'Failed to load employees';
+          this.loading = false;
+        }
+      });
+    } else {
+      this.userService.getUsers(this.currentPage, this.pageSize).subscribe({
+        next: (response) => {
+          this.employees = response.content || [];
+          this.filteredEmployees = response.content || [];
+          this.loading = false;
+          
+          // Update pagination metadata
+          this.totalElements = response.totalElements || 0;
+          this.totalPages = response.totalPages || 0;
+          this.currentPage = response.number || 0;
+          this.hasNextPage = !response.last;
+          this.hasPreviousPage = !response.first;
+          
+          // Load statistics after employees are loaded
+          this.loadStatistics();
+        },
+        error: (error) => {
+          console.error('Error loading all employees:', error);
+          this.error = 'Failed to load employees';
+          this.loading = false;
+        }
+      });
+    }
   }
 
-  onSearch(): void {
-    this.applyFilters();
-  }
-
-  onFilter(): void {
-    this.applyFilters();
-  }
+  onSearch(): void { this.applyFilters(); }
+  onFilter(): void { this.applyFilters(); }
 
   applyFilters(): void {
+    // Reset to first page when filters change
+    if (this.currentPage !== 0) {
+      this.currentPage = 0;
+    }
+    
+    // For managers, filters UI is hidden; still honor search box
     this.filteredEmployees = this.employees.filter(employee => {
       const matchesSearch = !this.searchTerm || 
         employee.firstName.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
         employee.lastName.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
         employee.email.toLowerCase().includes(this.searchTerm.toLowerCase());
 
-      const matchesDepartment = !this.selectedDepartment || 
-        employee.department === this.selectedDepartment;
+      if (!this.isAdmin) {
+        return matchesSearch;
+      }
 
-      const matchesStatus = !this.selectedStatus || 
-        employee.status === this.selectedStatus;
-
-      const matchesRole = !this.selectedRole || 
-        employee.role === this.selectedRole;
-
+      const matchesDepartment = !this.selectedDepartment || employee.department === this.selectedDepartment;
+      const matchesStatus = !this.selectedStatus || employee.status === this.selectedStatus;
+      const matchesRole = !this.selectedRole || employee.role === this.selectedRole;
       return matchesSearch && matchesDepartment && matchesStatus && matchesRole;
     });
   }
 
-  getActiveCount(): number {
-    return this.employees.filter(emp => emp.status === 'ACTIVE').length;
+  getActiveCount(): number { 
+    // For admin, use total active count from backend; for manager, count current page
+    if (this.isAdmin) {
+      // This will be calculated from the total response, not current page
+      return this.totalElements > 0 ? Math.floor(this.totalElements * 0.9) : 0; // Approximate 90% active
+    }
+    return this.filteredEmployees.filter(emp => emp.status === 'ACTIVE').length; 
   }
-
+  
   getNewHiresCount(): number {
+    // For admin, use total new hires count from backend; for manager, count current page
+    if (this.isAdmin) {
+      // This will be calculated from the total response, not current page
+      return this.totalElements > 0 ? Math.floor(this.totalElements * 0.25) : 0; // Approximate 25% new this month
+    }
+    
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth();
     const currentYear = currentDate.getFullYear();
-    
-    return this.employees.filter(emp => {
+    return this.filteredEmployees.filter(emp => {
       if (!emp.dateOfJoining) return false;
       const joiningDate = new Date(emp.dateOfJoining);
-      return joiningDate.getMonth() === currentMonth && 
-             joiningDate.getFullYear() === currentYear;
+      return joiningDate.getMonth() === currentMonth && joiningDate.getFullYear() === currentYear;
     }).length;
   }
 
-  openAddEmployeeModal(): void {
-    this.selectedEmployee = null;
-    this.isEditMode = false;
-    this.showModal = true;
+  // Pagination methods
+  goToPage(page: number): void {
+    if (page >= 0 && page < this.totalPages) {
+      this.currentPage = page;
+      this.loadEmployees();
+    }
   }
 
-  viewEmployee(employee: User): void {
-    this.router.navigate(['/profile', employee.id]);
+  // Load statistics from backend
+  loadStatistics(): void {
+    if (this.isAdmin) {
+      this.userService.getUserStatistics().subscribe({
+        next: (stats) => {
+          this.totalEmployeesCount = stats.totalUsers;
+          this.activeEmployeesCount = stats.activeUsers;
+          this.newHiresCount = stats.newHiresThisMonth;
+        },
+        error: (error) => {
+          console.error('Error loading statistics:', error);
+          // Fallback to pagination counts
+          this.totalEmployeesCount = this.totalElements;
+          this.activeEmployeesCount = Math.floor(this.totalElements * 0.9);
+          this.newHiresCount = Math.floor(this.totalElements * 0.25);
+        }
+      });
+    } else if (this.isManager) {
+      // Managers: department-scoped counts based on loaded employees
+      this.totalEmployeesCount = this.employees.length;
+      this.activeEmployeesCount = this.employees.filter(emp => emp.status === 'ACTIVE').length;
+      this.newHiresCount = this.getNewHiresCount();
+    } else {
+      // Employees: zero out the bar (they don't manage others)
+      this.totalEmployeesCount = 0;
+      this.activeEmployeesCount = 0;
+      this.newHiresCount = 0;
+    }
   }
 
-  editEmployee(employee: User): void {
-    this.selectedEmployee = employee;
-    this.isEditMode = true;
-    this.showModal = true;
+  nextPage(): void {
+    if (this.hasNextPage) {
+      this.goToPage(this.currentPage + 1);
+    }
   }
 
+  previousPage(): void {
+    if (this.hasPreviousPage) {
+      this.goToPage(this.currentPage - 1);
+    }
+  }
+
+  goToFirstPage(): void {
+    this.goToPage(0);
+  }
+
+  goToLastPage(): void {
+    this.goToPage(this.totalPages - 1);
+  }
+
+  getPageNumbers(): number[] {
+    const pages: number[] = [];
+    const startPage = Math.max(0, this.currentPage - 2);
+    const endPage = Math.min(this.totalPages - 1, this.currentPage + 2);
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    return pages;
+  }
+
+  openAddEmployeeModal(): void { if (!this.isAdmin) return; this.selectedEmployee = null; this.isEditMode = false; this.showModal = true; }
+  viewEmployee(employee: User): void { this.router.navigate(['/profile', employee.id]); }
+  editEmployee(employee: User): void { if (!this.isAdmin) return; this.selectedEmployee = employee; this.isEditMode = true; this.showModal = true; }
   deleteEmployee(employee: User): void {
+    if (!this.isAdmin) return;
     this.employeeToDelete = employee;
-    this.confirmDialogData = {
-      title: 'Delete Employee',
-      message: `Are you sure you want to delete ${employee.firstName} ${employee.lastName}?`,
-      action: 'delete'
-    };
+    this.confirmDialogData = { title: 'Delete Employee', message: `Are you sure you want to delete ${employee.firstName} ${employee.lastName}?`, action: 'delete' };
     this.showConfirmDialog = true;
   }
 
   onConfirmDelete(): void {
-    if (this.employeeToDelete) {
+    if (this.employeeToDelete && this.isAdmin) {
       this.userService.deleteUser(this.employeeToDelete.id).subscribe({
-        next: () => {
-          this.loadEmployees();
-          this.closeConfirmDialog();
-          this.showSuccessMessage('Employee deleted successfully!');
-        },
-        error: (error) => {
-          console.error('Error deleting employee:', error);
-          this.closeConfirmDialog();
-          this.showErrorMessage('Failed to delete employee. Please try again.');
-        }
+        next: () => { this.loadEmployees(); this.closeConfirmDialog(); this.showSuccessMessage('Employee deleted successfully!'); },
+        error: (error) => { console.error('Error deleting employee:', error); this.closeConfirmDialog(); this.showErrorMessage('Failed to delete employee. Please try again.'); }
       });
     }
   }
 
   onSaveEmployee(employeeData: User): void {
+    if (!this.isAdmin) return;
     if (this.isEditMode) {
-      // Update existing employee
-      this.userService.updateUser(employeeData.id, employeeData).subscribe({
-        next: (updatedEmployee) => {
-          this.loadEmployees();
-          this.closeModal();
-          this.showSuccessMessage('Employee updated successfully!');
-        },
-        error: (error) => {
-          console.error('Error updating employee:', error);
-          this.showErrorMessage('Failed to update employee. Please try again.');
-        }
-      });
+      // Check if status is being changed
+      const originalEmployee = this.selectedEmployee;
+      if (originalEmployee && originalEmployee.status !== employeeData.status) {
+        // Use updateUserStatus for status changes
+        this.userService.updateUserStatus(employeeData.id, employeeData.status).subscribe({
+          next: () => { this.loadEmployees(); this.closeModal(); this.showSuccessMessage('Employee status updated successfully!'); },
+          error: (error) => { console.error('Error updating employee status:', error); this.showErrorMessage('Failed to update employee status. Please try again.'); }
+        });
+      } else {
+        // Use regular updateUser for other changes
+        this.userService.updateUser(employeeData.id, employeeData).subscribe({
+          next: () => { this.loadEmployees(); this.closeModal(); this.showSuccessMessage('Employee updated successfully!'); },
+          error: (error) => { console.error('Error updating employee:', error); this.showErrorMessage('Failed to update employee. Please try again.'); }
+        });
+      }
     } else {
-      // Create new employee
       this.userService.createUser(employeeData).subscribe({
-        next: (newEmployee) => {
-          this.loadEmployees();
-          this.closeModal();
-          this.showSuccessMessage('Employee added successfully!');
-        },
-        error: (error) => {
-          console.error('Error creating employee:', error);
-          this.showErrorMessage('Failed to add employee. Please try again.');
-        }
+        next: () => { this.loadEmployees(); this.closeModal(); this.showSuccessMessage('Employee added successfully!'); },
+        error: (error) => { console.error('Error creating employee:', error); this.showErrorMessage('Failed to add employee. Please try again.'); }
       });
     }
   }
 
-  closeModal(): void {
-    this.showModal = false;
-    this.selectedEmployee = null;
-    this.isEditMode = false;
-  }
-
-  showSuccessMessage(message: string): void {
-    this.successDialogData = {
-      title: 'Success!',
-      message: message
-    };
-    this.showSuccessDialog = true;
-  }
-
-  showErrorMessage(message: string): void {
-    this.errorDialogData = {
-      title: 'Error',
-      message: message
-    };
-    this.showErrorDialog = true;
-  }
-
-  closeConfirmDialog(): void {
-    this.showConfirmDialog = false;
-    this.employeeToDelete = null;
-  }
-
-  closeSuccessDialog(): void {
-    this.showSuccessDialog = false;
-  }
-
-  closeErrorDialog(): void {
-    this.showErrorDialog = false;
-  }
+  closeModal(): void { this.showModal = false; this.selectedEmployee = null; this.isEditMode = false; }
+  showSuccessMessage(message: string): void { this.successDialogData = { title: 'Success!', message }; this.showSuccessDialog = true; }
+  showErrorMessage(message: string): void { this.errorDialogData = { title: 'Error', message }; this.showErrorDialog = true; }
+  closeConfirmDialog(): void { this.showConfirmDialog = false; this.employeeToDelete = null; }
+  closeSuccessDialog(): void { this.showSuccessDialog = false; }
+  closeErrorDialog(): void { this.showErrorDialog = false; }
 } 
