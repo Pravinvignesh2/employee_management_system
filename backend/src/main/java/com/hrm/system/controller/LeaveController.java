@@ -32,19 +32,19 @@ import org.springframework.security.core.context.SecurityContextHolder;
 @Tag(name = "Leave Management", description = "APIs for managing employee leaves")
 @CrossOrigin(origins = "*")
 public class LeaveController {
-    
+
     @Autowired
     private LeaveService leaveService;
-    
+
     @Autowired
     private LeaveRepository leaveRepository;
-    
+
     // Helper method to get current user
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return (User) authentication.getPrincipal();
     }
-    
+
     /**
      * Create a new leave request
      */
@@ -55,7 +55,7 @@ public class LeaveController {
         LeaveDto createdLeave = leaveService.createLeave(leaveDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdLeave);
     }
-    
+
     /**
      * Get all leaves with pagination and filters
      */
@@ -73,20 +73,22 @@ public class LeaveController {
             @Parameter(description = "Filter by start date") @RequestParam(required = false) String startDate,
             @Parameter(description = "Filter by end date") @RequestParam(required = false) String endDate,
             @Parameter(description = "Search query") @RequestParam(required = false) String query) {
-        
+
         Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
-        
+
         // Apply filters if provided
-        if (userId != null || leaveType != null || status != null || startDate != null || endDate != null || query != null) {
-            Page<LeaveDto> leaves = leaveService.getAllLeavesWithFilters(pageable, userId, leaveType, status, startDate, endDate, query);
+        if (userId != null || leaveType != null || status != null || startDate != null || endDate != null
+                || query != null) {
+            Page<LeaveDto> leaves = leaveService.getAllLeavesWithFilters(pageable, userId, leaveType, status, startDate,
+                    endDate, query);
             return ResponseEntity.ok(leaves);
         } else {
             Page<LeaveDto> leaves = leaveService.getAllLeaves(pageable);
             return ResponseEntity.ok(leaves);
         }
     }
-    
+
     /**
      * Get leave by ID
      */
@@ -98,7 +100,7 @@ public class LeaveController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
-    
+
     /**
      * Update leave request
      */
@@ -113,7 +115,7 @@ public class LeaveController {
             return ResponseEntity.notFound().build();
         }
     }
-    
+
     /**
      * Delete leave request
      */
@@ -125,27 +127,27 @@ public class LeaveController {
             // Check if user is owner or admin/manager
             User currentUser = getCurrentUser();
             Optional<Leave> leave = leaveRepository.findById(id);
-            
+
             if (leave.isEmpty()) {
                 return ResponseEntity.notFound().build();
             }
-            
+
             Leave existingLeave = leave.get();
-            
+
             // Only allow deletion if user is admin, manager, or the owner of the leave
-            if (!currentUser.getRole().equals(User.UserRole.ADMIN) && 
-                !currentUser.getRole().equals(User.UserRole.MANAGER) && 
-                !existingLeave.getUser().getId().equals(currentUser.getId())) {
+            if (!currentUser.getRole().equals(User.UserRole.ADMIN) &&
+                    !currentUser.getRole().equals(User.UserRole.MANAGER) &&
+                    !existingLeave.getUser().getId().equals(currentUser.getId())) {
                 return ResponseEntity.status(403).build();
             }
-            
+
             leaveService.deleteLeave(id);
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
     }
-    
+
     /**
      * Get leaves by user ID
      */
@@ -156,7 +158,7 @@ public class LeaveController {
         List<LeaveDto> leaves = leaveService.getLeavesByUser(userId);
         return ResponseEntity.ok(leaves);
     }
-    
+
     /**
      * Get leaves by status
      */
@@ -167,7 +169,7 @@ public class LeaveController {
         List<LeaveDto> leaves = leaveService.getLeavesByStatus(status);
         return ResponseEntity.ok(leaves);
     }
-    
+
     /**
      * Get leaves by leave type
      */
@@ -178,7 +180,7 @@ public class LeaveController {
         List<LeaveDto> leaves = leaveService.getLeavesByType(leaveType);
         return ResponseEntity.ok(leaves);
     }
-    
+
     /**
      * Get leaves by department
      */
@@ -189,7 +191,7 @@ public class LeaveController {
         List<LeaveDto> leaves = leaveService.getLeavesByDepartment(department);
         return ResponseEntity.ok(leaves);
     }
-    
+
     /**
      * Approve leave request
      */
@@ -204,7 +206,7 @@ public class LeaveController {
             return ResponseEntity.notFound().build();
         }
     }
-    
+
     /**
      * Reject leave request
      */
@@ -221,22 +223,39 @@ public class LeaveController {
             return ResponseEntity.notFound().build();
         }
     }
-    
+
     /**
      * Cancel leave request
      */
     @PatchMapping("/{id}/cancel")
-    @PreAuthorize("@leaveService.isOwner(#id, authentication.principal.id)")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYEE')")
     @Operation(summary = "Cancel leave request", description = "Cancel a leave request")
     public ResponseEntity<LeaveDto> cancelLeave(@PathVariable Long id) {
         try {
+            // Check if user is owner or admin
+            User currentUser = getCurrentUser();
+            Optional<Leave> leave = leaveRepository.findById(id);
+
+            if (leave.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Leave existingLeave = leave.get();
+
+            // Only allow cancellation if user is admin, manager, or the owner of the leave
+            if (!currentUser.getRole().equals(User.UserRole.ADMIN) &&
+                    !currentUser.getRole().equals(User.UserRole.MANAGER) &&
+                    !existingLeave.getUser().getId().equals(currentUser.getId())) {
+                return ResponseEntity.status(403).build();
+            }
+
             LeaveDto cancelledLeave = leaveService.cancelLeave(id);
             return ResponseEntity.ok(cancelledLeave);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
     }
-    
+
     /**
      * Get leave statistics for dashboard
      */
@@ -247,7 +266,7 @@ public class LeaveController {
         LeaveService.LeaveStatistics statistics = leaveService.getLeaveStatistics();
         return ResponseEntity.ok(statistics);
     }
-    
+
     /**
      * Get user leave statistics
      */
@@ -258,7 +277,7 @@ public class LeaveController {
         LeaveService.UserLeaveStatistics statistics = leaveService.getUserLeaveStatistics(userId);
         return ResponseEntity.ok(statistics);
     }
-    
+
     /**
      * Get current user leave statistics
      */
@@ -270,7 +289,7 @@ public class LeaveController {
         LeaveService.UserLeaveStatistics statistics = leaveService.getUserLeaveStatistics(currentUser.getId());
         return ResponseEntity.ok(statistics);
     }
-    
+
     /**
      * Get current user's leaves
      */
@@ -282,7 +301,7 @@ public class LeaveController {
         List<LeaveDto> leaves = leaveService.getLeavesByUser(currentUser.getId());
         return ResponseEntity.ok(leaves);
     }
-    
+
     /**
      * Get pending leaves count
      */
@@ -293,7 +312,7 @@ public class LeaveController {
         long count = leaveService.getPendingLeavesCount();
         return ResponseEntity.ok(count);
     }
-    
+
     /**
      * Get approved leaves count
      */
@@ -304,7 +323,7 @@ public class LeaveController {
         long count = leaveService.getApprovedLeavesCount();
         return ResponseEntity.ok(count);
     }
-    
+
     /**
      * Get rejected leaves count
      */
@@ -315,4 +334,4 @@ public class LeaveController {
         long count = leaveService.getRejectedLeavesCount();
         return ResponseEntity.ok(count);
     }
-} 
+}

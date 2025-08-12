@@ -181,10 +181,10 @@ import {
                  </td>
                  <td *ngIf="isAdminOrManager">
                    <div class="actions">
-                     <button class="btn-edit" (click)="editAttendance(record)">
-                       <i class="fas fa-edit"></i>
+                     <button class="btn-view" (click)="viewAttendanceDetails(record)" title="View Details">
+                       <i class="fas fa-eye"></i>
                      </button>
-                     <button class="btn-delete" (click)="deleteAttendance(record.id!)">
+                     <button class="btn-delete" *ngIf="isAdmin" (click)="deleteAttendance(record.id!)" title="Delete">
                        <i class="fas fa-trash"></i>
                      </button>
                    </div>
@@ -243,6 +243,61 @@ import {
       [message]="successDialogData.message"
       (close)="closeSuccessDialog()">
     </app-success-dialog>
+
+    <!-- Attendance Details Modal -->
+    <div class="modal-overlay" *ngIf="showAttendanceDetailsModal" (click)="closeAttendanceDetailsModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Attendance Details</h3>
+          <button class="btn-close" (click)="closeAttendanceDetailsModal()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        
+        <div class="modal-body" *ngIf="selectedAttendanceForDetails">
+          <div class="detail-row">
+            <label>Employee:</label>
+            <span>{{ getFullName(selectedAttendanceForDetails) }}</span>
+          </div>
+          
+          <div class="detail-row">
+            <label>Employee ID:</label>
+            <span>{{ selectedAttendanceForDetails.employeeId }}</span>
+          </div>
+          
+          <div class="detail-row">
+            <label>Date:</label>
+            <span>{{ selectedAttendanceForDetails.date | date:'fullDate' }}</span>
+          </div>
+          
+          <div class="detail-row">
+            <label>Punch In:</label>
+            <span>{{ selectedAttendanceForDetails.punchInTime ? formatTime(selectedAttendanceForDetails.punchInTime) : 'Not punched in' }}</span>
+          </div>
+          
+          <div class="detail-row">
+            <label>Punch Out:</label>
+            <span>{{ selectedAttendanceForDetails.punchOutTime ? formatTime(selectedAttendanceForDetails.punchOutTime) : 'Not punched out' }}</span>
+          </div>
+          
+          <div class="detail-row">
+            <label>Working Hours:</label>
+            <span>{{ formatWorkingHours(selectedAttendanceForDetails) }}</span>
+          </div>
+          
+          <div class="detail-row">
+            <label>Status:</label>
+            <span class="status-badge" [class]="getStatusClass(selectedAttendanceForDetails.status)">
+              {{ getStatusDisplay(selectedAttendanceForDetails.status) }}
+            </span>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button class="btn-secondary" (click)="closeAttendanceDetailsModal()">Close</button>
+        </div>
+      </div>
+    </div>
   `,
   styles: [`
     .attendance-container {
@@ -683,6 +738,138 @@ import {
         flex-direction: column;
       }
     }
+
+    .btn-view {
+      background: #bee3f8;
+      color: #2a4365;
+      border: none;
+      border-radius: 6px;
+      padding: 6px;
+      margin-right: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-view:hover {
+      transform: scale(1.1);
+    }
+
+    .btn-delete {
+      background: #fed7d7;
+      color: #742a2a;
+      border: none;
+      border-radius: 6px;
+      padding: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-delete:hover {
+      transform: scale(1.1);
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: var(--surface-color);
+      border-radius: 12px;
+      padding: 0;
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    .modal-header {
+      padding: 24px 24px 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .btn-close {
+      background: none;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      padding: 4px;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+
+    .btn-close:hover {
+      background: var(--hover-color);
+    }
+
+    .modal-body {
+      padding: 24px;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .detail-row:last-child {
+      border-bottom: none;
+    }
+
+    .detail-row label {
+      font-weight: 600;
+      color: var(--text-secondary);
+      min-width: 120px;
+    }
+
+    .detail-row span {
+      color: var(--text-primary);
+      text-align: right;
+    }
+
+    .modal-footer {
+      padding: 0 24px 24px 24px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .btn-secondary {
+      background: var(--secondary-color);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background: var(--hover-color);
+    }
   `]
 })
 export class AttendanceComponent implements OnInit {
@@ -691,6 +878,7 @@ export class AttendanceComponent implements OnInit {
   currentUser: any;
   isAdminOrManager = false;
   isLoading = false;
+  isAdmin = false; // Added isAdmin property
 
   // Punch status
   hasPunchedIn = false;
@@ -710,9 +898,11 @@ export class AttendanceComponent implements OnInit {
   selectedDate = new Date().toLocaleDateString('en-CA'); // Use local timezone
   selectedStatus = '';
 
-  // Dialog states
+  // Modal states
   showConfirmDialog = false;
   showSuccessDialog = false;
+  showAttendanceDetailsModal = false;
+  selectedAttendanceForDetails: Attendance | null = null;
   confirmDialogData = { title: '', message: '', action: '', attendanceId: 0 };
   successDialogData = { title: '', message: '' };
 
@@ -739,6 +929,7 @@ export class AttendanceComponent implements OnInit {
   loadCurrentUser(): void {
     this.currentUser = this.authService.getCurrentUser();
     this.isAdminOrManager = this.authService.hasAnyRole(['ADMIN', 'MANAGER']);
+    this.isAdmin = this.authService.hasRole('ADMIN'); // Set isAdmin based on role
   }
 
   loadTodayStatus(): void {
@@ -909,15 +1100,20 @@ export class AttendanceComponent implements OnInit {
     this.loadAttendanceRecords();
   }
 
-  editAttendance(attendance: Attendance): void {
-    // Implement edit functionality
-    console.log('Edit attendance:', attendance);
+  viewAttendanceDetails(attendance: Attendance): void {
+    this.selectedAttendanceForDetails = attendance;
+    this.showAttendanceDetailsModal = true;
+  }
+
+  closeAttendanceDetailsModal(): void {
+    this.showAttendanceDetailsModal = false;
+    this.selectedAttendanceForDetails = null;
   }
 
   deleteAttendance(id: number): void {
     this.confirmDialogData = {
       title: 'Delete Attendance Record',
-      message: 'Are you sure you want to delete this attendance record?',
+      message: 'Are you sure you want to delete this attendance record? This action cannot be undone.',
       action: 'delete',
       attendanceId: id
     };

@@ -1053,40 +1053,37 @@ export class DashboardComponent implements OnInit {
   loadDashboardData(): void {
     this.loading = true;
     
-    // Load dashboard statistics for admin/manager
+    // Load user statistics only for admin/manager
+    // Load user statistics only for admin/manager
     if (this.isAdminOrManager) {
-      this.dashboardService.getDashboardStatistics().subscribe({
+      this.userService.getUserStatistics().subscribe({
         next: (stats) => {
-          // Map the dashboard statistics to our component properties
-          this.userStatistics = {
-            totalUsers: stats.totalUsers || 0,
-            activeUsers: stats.activeUsers || 0,
-            newHiresThisMonth: stats.newHiresThisMonth || 0,
-            pendingApprovals: stats.pendingApprovals || 0
-          };
-          
-          this.attendanceStatistics = {
-            totalPresent: stats.presentToday || 0,
-            totalAbsent: stats.absentToday || 0,
-            totalHalfDay: stats.halfDayToday || 0,
-            totalLeave: 0, // Not provided by dashboard service
-            attendanceRate: stats.attendanceRate || 0
-          };
-          
-          this.leaveStatistics = {
-            totalLeaves: stats.totalLeaves || 0,
-            pendingLeaves: stats.pendingLeaves || 0,
-            approvedLeaves: stats.approvedLeaves || 0,
-            rejectedLeaves: 0, // Not provided by dashboard service
-            cancelledLeaves: 0, // Not provided by dashboard service
-            approvalRate: 0 // Will be calculated
-          };
-          
+          this.userStatistics = stats;
           this.loading = false;
         },
         error: (error) => {
-          console.error('Error loading dashboard statistics:', error);
+          console.error('Error loading user statistics:', error);
           this.loading = false;
+        }
+      });
+
+      // Load attendance statistics for admins/managers
+      this.attendanceService.getAttendanceStatistics().subscribe({
+        next: (stats) => {
+          this.attendanceStatistics = stats;
+        },
+        error: (error) => {
+          console.error('Error loading attendance statistics:', error);
+        }
+      });
+
+      // Load leave statistics for admins/managers
+      this.leaveService.getLeaveStatistics().subscribe({
+        next: (stats) => {
+          this.leaveStatistics = stats;
+        },
+        error: (error) => {
+          console.error('Error loading leave statistics:', error);
         }
       });
 
